@@ -137,6 +137,11 @@ final class GlassView: UIView {
     var crackgateCard: UIView?
     var crackgateWork: DispatchWorkItem?
 
+    #if DEBUG
+    /// Screenshot staging: patterns to use for the next hits, in order.
+    var debugPatterns: [CrackPattern] = []
+    #endif
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
@@ -643,6 +648,9 @@ final class GlassView: UIView {
         let setting = GagSettings.crackPattern
         var style = setting.resolved()
         if setting == .random, !style.needsScreen, let last = webPool.last { style = last.style }
+        #if DEBUG
+        if !debugPatterns.isEmpty { style = debugPatterns.removeFirst() }
+        #endif
         var set = CrackSet(id: id, origin: .point(point), style: style, offset: point, target: radius * style.localScale, isFull: full)
         if !style.needsScreen, webPoolSetting == setting, let index = webPool.lastIndex(where: { $0.style == style }) {
             set.pattern = webPool.remove(at: index).pattern

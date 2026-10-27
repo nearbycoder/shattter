@@ -3,6 +3,13 @@ import UIKit
 /// Draws the screen under the glass: plain glass, or a convincing fake phone screen for pranks.
 enum ScreenArt {
     static func render(_ screen: PrankScreen, size: CGSize, scale: CGFloat, palette: GlassPalette, date: Date) -> UIImage {
+        var date = date
+        #if DEBUG
+        // Screenshots use Apple's 9:41.
+        if UserDefaults.standard.bool(forKey: "FakeClock") {
+            date = Calendar.current.date(bySettingHour: 9, minute: 41, second: 0, of: date) ?? date
+        }
+        #endif
         if screen == .glass {
             return PaneArtwork.render(size: size, scale: scale, palette: palette, seed: UInt64.random(in: 1...UInt64.max))
         }
@@ -61,9 +68,9 @@ enum ScreenArt {
                      body: "Did you drop your phone again?? 😩", colors: [UIColor(red: 0.4, green: 0.88, blue: 0.4, alpha: 1), UIColor(red: 0.15, green: 0.7, blue: 0.25, alpha: 1)],
                      symbol: "message.fill")
         y += 84
-        notification(CGRect(x: cardX, y: y, width: cardWidth, height: 74), title: "AppleCare+", time: "2m ago",
+        notification(CGRect(x: cardX, y: y, width: cardWidth, height: 74), title: "Phone Protection+", time: "2m ago",
                      body: "Your screen coverage expired yesterday.", colors: [UIColor(white: 0.98, alpha: 1), UIColor(white: 0.88, alpha: 1)],
-                     symbol: "applelogo", glyph: .black)
+                     symbol: "shield.slash.fill", glyph: rgb(0.95, 0.3, 0.25))
 
         for (x, name) in [(CGFloat(52), "flashlight.off.fill"), (w - 52, "camera.fill")] {
             let circle = CGRect(x: x - 25, y: h - 90, width: 50, height: 50)
@@ -103,7 +110,7 @@ enum ScreenArt {
     }
 
     private static let apps: [MockApp] = [
-        MockApp(name: "FaceTime", colors: [rgb(0.38, 0.88, 0.42), rgb(0.1, 0.7, 0.25)], symbol: "video.fill"),
+        MockApp(name: "Video", colors: [rgb(0.38, 0.88, 0.42), rgb(0.1, 0.7, 0.25)], symbol: "video.fill"),
         MockApp(name: "Calendar", colors: [.white, rgb(0.93, 0.93, 0.93)], symbol: "calendar", glyph: rgb(0.95, 0.2, 0.2)),
         MockApp(name: "Photos", colors: [.white, rgb(0.94, 0.94, 0.94)], symbol: "camera.macro", glyph: rgb(1, 0.55, 0.1)),
         MockApp(name: "Camera", colors: [rgb(0.78, 0.78, 0.8), rgb(0.55, 0.55, 0.58)], symbol: "camera.fill", glyph: rgb(0.15, 0.15, 0.16)),
@@ -115,7 +122,7 @@ enum ScreenArt {
         MockApp(name: "Maps", colors: [rgb(0.45, 0.85, 0.5), rgb(0.2, 0.6, 0.9)], symbol: "map.fill"),
         MockApp(name: "Stocks", colors: [rgb(0.15, 0.15, 0.16), .black], symbol: "chart.line.uptrend.xyaxis", glyph: rgb(0.3, 0.9, 0.4)),
         MockApp(name: "Wallet", colors: [rgb(0.15, 0.15, 0.16), .black], symbol: "wallet.pass.fill"),
-        MockApp(name: "App Store", colors: [rgb(0.25, 0.72, 1), rgb(0.1, 0.42, 0.95)], symbol: "bag.fill"),
+        MockApp(name: "Store", colors: [rgb(0.25, 0.72, 1), rgb(0.1, 0.42, 0.95)], symbol: "bag.fill"),
         MockApp(name: "Podcasts", colors: [rgb(0.78, 0.42, 1), rgb(0.52, 0.2, 0.86)], symbol: "mic.fill"),
         MockApp(name: "TV", colors: [rgb(0.15, 0.15, 0.16), .black], symbol: "tv.fill"),
         MockApp(name: "Health", colors: [.white, rgb(0.94, 0.94, 0.94)], symbol: "heart.fill", glyph: rgb(1, 0.25, 0.45)),
@@ -123,7 +130,7 @@ enum ScreenArt {
         MockApp(name: "Fitness", colors: [rgb(0.15, 0.15, 0.16), .black], symbol: "figure.run", glyph: rgb(0.65, 1, 0.2)),
         MockApp(name: "Books", colors: [rgb(1, 0.62, 0.22), rgb(1, 0.45, 0.1)], symbol: "book.fill"),
         MockApp(name: "Settings", colors: [rgb(0.62, 0.62, 0.65), rgb(0.42, 0.42, 0.45)], symbol: "gearshape.fill", badge: 1),
-        MockApp(name: "Find My", colors: [rgb(0.42, 0.86, 0.5), rgb(0.18, 0.68, 0.35)], symbol: "location.fill"),
+        MockApp(name: "Locate", colors: [rgb(0.42, 0.86, 0.5), rgb(0.18, 0.68, 0.35)], symbol: "location.fill"),
         MockApp(name: "Translate", colors: [rgb(0.25, 0.52, 1), rgb(0.1, 0.3, 0.82)], symbol: "character.bubble.fill"),
         MockApp(name: "Calculator", colors: [rgb(0.3, 0.3, 0.32), rgb(0.12, 0.12, 0.13)], symbol: "plus.forwardslash.minus", glyph: rgb(1, 0.6, 0.1)),
         MockApp(name: "Files", colors: [rgb(0.35, 0.65, 1), rgb(0.15, 0.45, 0.95)], symbol: "folder.fill"),
@@ -144,7 +151,7 @@ enum ScreenArt {
         statusBar(rect, color: .white, time: clock(date))
 
         let landscape = w > h
-        let columns = landscape ? max(6, Int(w / 125)) : 4
+        let columns = landscape ? max(6, Int(w / 125)) : max(4, Int(w / 150))
         let icon = min(64, w / (CGFloat(columns) * 1.62))
         let margin = landscape ? w * 0.07 : w * 0.085
         let gap = (w - 2 * margin - CGFloat(columns) * icon) / CGFloat(columns - 1)
@@ -228,7 +235,7 @@ enum ScreenArt {
         text("Mom ›", in: CGRect(x: 0, y: 110, width: w, height: 16), font: .systemFont(ofSize: 12), color: .black)
         UIColor(white: 0.82, alpha: 1).setFill()
         cg.fill(CGRect(x: 0, y: 134, width: w, height: 0.5))
-        text("iMessage\nToday 11:02 AM", in: CGRect(x: 0, y: 148, width: w, height: 30),
+        text("Text Message\nToday 11:02 AM", in: CGRect(x: 0, y: 148, width: w, height: 30),
              font: .systemFont(ofSize: 11, weight: .medium), color: UIColor(white: 0.55, alpha: 1))
 
         let thread: [(String, Bool)] = [
@@ -262,7 +269,7 @@ enum ScreenArt {
         let fieldPath = UIBezierPath(roundedRect: field, cornerRadius: 18)
         fieldPath.lineWidth = 1
         fieldPath.stroke()
-        text("iMessage", in: CGRect(x: field.minX + 14, y: field.midY - 10, width: 120, height: 20),
+        text("Message", in: CGRect(x: field.minX + 14, y: field.midY - 10, width: 120, height: 20),
              font: .systemFont(ofSize: 17), color: UIColor(white: 0.62, alpha: 1), alignment: .left)
         symbol("waveform", center: CGPoint(x: field.maxX - 20, y: field.midY), size: 16, color: UIColor(white: 0.55, alpha: 1))
         homeIndicator(rect, color: .black)

@@ -165,7 +165,7 @@ enum GagSettings {
         CrackPattern(rawValue: defaults.string(forKey: Key.crackPattern) ?? "") ?? .random
     }
 
-    /// Mimics the October 2026 iPhone Duo inner-display reports: crunch on unfold, crack down the crease.
+    /// Mimics the October 2026 foldable inner-display reports: crunch on unfold, crack down the crease.
     static var crackgate: Bool { defaults.bool(forKey: Key.crackgate) }
 
     static var soundPack: SoundPack {

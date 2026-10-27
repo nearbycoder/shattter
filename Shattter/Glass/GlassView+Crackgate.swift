@@ -1,6 +1,6 @@
 import UIKit
 
-/// Crackgate: recreates the October 2026 iPhone Duo inner-display reports. Something catches in the hinge
+/// Crackgate: recreates the October 2026 foldable inner-display reports. Something catches in the hinge
 /// while unfolding, one audible crack, a thin crack along the crease from a spot in its lower half,
 /// and a band of stuck bright pixels running from there across one half of the display.
 extension GlassView {
@@ -173,7 +173,7 @@ extension GlassView {
         title.font = UIFont.systemFont(ofSize: 20, weight: .heavy).rounded
         title.textColor = .white
         let body = UILabel()
-        body.text = "“We’re aware of an issue impacting the inner display on a small number of iPhone Duo units.” Probably the hinge.\nOut-of-warranty repair: $999."
+        body.text = "“We’re aware of an issue impacting the inner display on a small number of units.” Probably the hinge.\nOut-of-warranty repair: $999."
         body.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         body.textColor = UIColor.white.withAlphaComponent(0.85)
         body.numberOfLines = 0

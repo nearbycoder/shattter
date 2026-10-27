@@ -8,7 +8,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    TARGETED_DEVICE_FAMILY: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
     DEVELOPMENT_TEAM: 4F2YLTHL8T
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 targets:
@@ -37,6 +37,11 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
           UISceneConfigurations:

@@ -45,7 +45,7 @@ struct OptionsView: View {
                 } header: {
                     Text("Crackgate 😬")
                 } footer: {
-                    Text("Recreates the iPhone Duo reports: something catches in the hinge as it unfolds, one loud crack, a thin crack along the crease from a spot in its lower half, and a band of stuck bright pixels across one half of the screen. Hand someone the folded phone and let them open it.")
+                    Text("Recreates the foldable-phone reports: something catches in the hinge as it unfolds, one loud crack, a thin crack along the crease from a spot in its lower half, and a band of stuck bright pixels across one half of the screen. Hand someone the folded phone and let them open it.")
                 }
 
                 Section {

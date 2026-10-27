@@ -77,6 +77,9 @@ final class GlassViewController: UIViewController, UIAdaptivePresentationControl
         if ProcessInfo.processInfo.arguments.contains("-ShowOptions") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.presentOptions() }
         }
+        if let shot = UserDefaults.standard.string(forKey: "Shot") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.glassView.stageShot(shot) }
+        }
         #endif
     }
 

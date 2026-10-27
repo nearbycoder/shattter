@@ -20,7 +20,7 @@ final class BackdropView: UIView {
     private static let quips = [
         "Oops.", "Smashing!", "Pane-ful.", "Well, that happened.", "7 years bad luck.",
         "You break it, you buy it.", "Glass half empty.", "Crack-tastic!", "Shards everywhere.",
-        "Not covered by AppleCare.", "Have you tried folding it gently?", "That's one way to open it.",
+        "Not covered by warranty.", "Have you tried folding it gently?", "That's one way to open it.",
         "Hinge: 1  Glass: 0", "Satisfying, right?", "Again!",
     ]
 

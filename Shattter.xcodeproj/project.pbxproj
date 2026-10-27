@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C5D3D8FDDF60DB7DC35BE4C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8CF9F8C9EA03EEDC9DC2E55D /* PrivacyInfo.xcprivacy */; };
+		19B3B8C5188991A496E0D174 /* GlassView+Screenshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06335C79A469032810AE8292 /* GlassView+Screenshots.swift */; };
 		1E09512DCA09EE158A967387 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */; };
 		2E0A3498B00EE2FD98BF4405 /* ScreenArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF39FC1367AE7B10D9D13367 /* ScreenArt.swift */; };
 		2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */; };
@@ -38,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		06335C79A469032810AE8292 /* GlassView+Screenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlassView+Screenshots.swift"; sourceTree = "<group>"; };
 		0DF168158519D1C138F25D0A /* GlassView+Shatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlassView+Shatter.swift"; sourceTree = "<group>"; };
 		132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneArtwork.swift; sourceTree = "<group>"; };
 		3523126620D0B460C6588B4F /* ShattterTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ShattterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -87,6 +89,7 @@
 				850C0280A91AF993F02D72E6 /* FractureGeometry.swift */,
 				7ACC6864BFAA2505C099EF0A /* GlassView.swift */,
 				D3BD1460D194B7DB429E3FD6 /* GlassView+Crackgate.swift */,
+				06335C79A469032810AE8292 /* GlassView+Screenshots.swift */,
 				0DF168158519D1C138F25D0A /* GlassView+Shatter.swift */,
 				B161E3D8081E457AC14AAD3A /* GlassViewController.swift */,
 				132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */,
@@ -260,6 +263,7 @@
 				2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */,
 				9CFA8FAA7C741E5C31300B94 /* GlassSynth.swift in Sources */,
 				FBC2D4152EE1E5D51D0FC4C5 /* GlassView+Crackgate.swift in Sources */,
+				19B3B8C5188991A496E0D174 /* GlassView+Screenshots.swift in Sources */,
 				61FE7477F6D74F4511CC9888 /* GlassView+Shatter.swift in Sources */,
 				B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */,
 				80FCF466C93F405D151D2445 /* GlassViewController.swift in Sources */,
@@ -344,7 +348,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -450,7 +454,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
