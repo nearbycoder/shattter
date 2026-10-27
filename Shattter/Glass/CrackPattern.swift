@@ -80,7 +80,7 @@ enum CrackPattern: String, CaseIterable, Identifiable {
     /// Whether the Voronoi shard outlines are drawn as cracks, rather than only procedural lines.
     var showsCellEdges: Bool {
         switch self {
-        case .lightning, .hairline, .faultLine, .edgeSplit, .shear: false
+        case .lightning, .hairline, .faultLine, .edgeSplit, .shear, .starburst, .spiral, .ripple, .snowflake: false
         default: true
         }
     }

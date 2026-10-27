@@ -588,9 +588,14 @@ final class GlassView: UIView {
             let id = nextCrackID
             nextCrackID += 1
             hingeSetID = id
-            let origin = hingeLine
-            crackSets.append(CrackSet(id: id, origin: origin, offset: .zero, target: 0))
-            buildCrackPattern(for: id, origin: origin)
+            // Spider Web strings stress webs along the whole crease; other patterns burst from a point on it.
+            let style = GagSettings.crackPattern.resolved()
+            var origin = hingeLine
+            if style != .spiderWeb, case .line(let a, let b) = hingeLine {
+                origin = .point(a + (b - a) * CGFloat.random(in: 0.3...0.7))
+            }
+            crackSets.append(CrackSet(id: id, origin: origin, style: style, offset: .zero, target: 0))
+            buildCrackPattern(for: id, origin: origin, style: style)
             GlassSound.shared.play(.crack)
             Haptics.shared.crack(intensity: 0.8)
             prepareFinalShards()

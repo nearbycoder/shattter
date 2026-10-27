@@ -168,10 +168,16 @@ enum FractureBuilder {
                 $0.radiusJitter = 0.02; $0.forkChance = 0.05; $0.wideForkChance = 0.25
             }
         case .starburst:
-            seeds = web(c, reach) {
-                $0.spokes = 34...44; $0.growth = 2.3...3.0; $0.ringCap = 260...360
-                $0.forkChance = 0.3; $0.wideForkChance = 0.7
+            // Long straight rays and nothing else.
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            let rays = Int(rng.range(26, 38))
+            let base = rng.range(0, .pi * 2)
+            for ray in 0..<rays {
+                let angle = base + CGFloat(ray) * .pi * 2 / CGFloat(rays) + rng.signed() * 0.08
+                walk(from: c, angle: angle, length: reach * rng.range(0.3, 1), step: 14...22, wiggle: 0.03,
+                     branchChance: 0.02, depth: 1, reveal: 0, bounds: nil, rng: &rng, into: &cracks)
             }
+            cracks.append(ProceduralCrack(points: (0...8).map { c + CGPoint(angle: CGFloat($0) * .pi / 4) * 7 }, start: 0))
         case .buckshot:
             for _ in 0..<Int(rng.range(5, 9)) {
                 let sub = c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(15, 85)
@@ -255,8 +261,35 @@ enum FractureBuilder {
                 cracks.append(ProceduralCrack(points: points, start: distance))
             }
         case .spiral:
+            // Arms curling out from the impact, tied together here and there.
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
             let direction: CGFloat = rng.unit() < 0.5 ? 1 : -1
-            seeds = web(c, reach) { $0.spokes = 18...22; $0.twist = 1.5 * direction; $0.growth = 1.35...1.5; $0.ringCap = 60...80 }
+            let arms = Int(rng.range(5, 8))
+            let tightness = rng.range(0.9, 1.25)
+            let base = rng.range(0, .pi * 2)
+            var armPoints: [[CGPoint]] = []
+            for arm in 0..<arms {
+                let start = base + CGFloat(arm) * .pi * 2 / CGFloat(arms)
+                var points: [CGPoint] = []
+                var r: CGFloat = 5
+                while r < reach {
+                    let theta = start + direction * log(r / 5) / tightness
+                    points.append(c + CGPoint(angle: theta + rng.signed() * 0.02) * (r * rng.range(0.98, 1.02)))
+                    r *= 1.07
+                }
+                armPoints.append(points)
+                cracks.append(ProceduralCrack(points: points, start: 0))
+            }
+            for arm in armPoints.indices {
+                let next = armPoints[(arm + 1) % armPoints.count]
+                var index = Int(rng.range(8, 14))
+                while index < min(armPoints[arm].count, next.count) {
+                    let a = armPoints[arm][index]
+                    let b = next[max(0, index - Int(rng.range(2, 6)))]
+                    cracks.append(ProceduralCrack(points: [a, (a + b) * 0.5 + CGPoint(x: rng.signed() * 3, y: rng.signed() * 3), b], start: (a - c).length))
+                    index += Int(rng.range(6, 12))
+                }
+            }
         case .honeycomb:
             let spacing = rng.range(30, 38)
             let rowHeight = spacing * 0.866
@@ -302,7 +335,32 @@ enum FractureBuilder {
                 cracks.append(ProceduralCrack(points: [c, c + CGPoint(angle: angle) * rng.range(8, 28)], start: 0))
             }
         case .ripple:
-            seeds = web(c, reach) { $0.spokes = 16...20; $0.growth = 1.22...1.32; $0.ringCap = 50...70; $0.wave = 0.08 }
+            // Broken, wavy rings spreading outward like a dropped pebble in water.
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            var radius = rng.range(12, 18)
+            let phase = rng.range(0, .pi * 2)
+            while radius < reach {
+                var theta = rng.range(0, .pi * 2)
+                let end = theta + .pi * 2
+                while theta < end {
+                    let arc = min(rng.range(0.6, 2.2), end - theta)
+                    var points: [CGPoint] = []
+                    var t = theta
+                    while t <= theta + arc {
+                        let wobble = 1 + 0.05 * sin(t * 5 + phase + radius * 0.05)
+                        points.append(c + CGPoint(angle: t) * (radius * wobble))
+                        t += max(0.04, 10 / radius)
+                    }
+                    if points.count > 1 { cracks.append(ProceduralCrack(points: points, start: radius)) }
+                    theta += arc + rng.range(0.12, 0.45)
+                }
+                radius += rng.range(14, 22) * (1 + radius / 260)
+            }
+            for _ in 0..<12 {
+                let angle = rng.range(0, .pi * 2)
+                let r = rng.range(10, reach * 0.6)
+                cracks.append(ProceduralCrack(points: [c + CGPoint(angle: angle) * r, c + CGPoint(angle: angle) * (r + rng.range(12, 30))], start: r))
+            }
         case .faultLine:
             seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
             let angle = rng.range(0, .pi)
@@ -314,14 +372,36 @@ enum FractureBuilder {
                 cracks.append(ProceduralCrack(points: [c, c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(18, 55)], start: 0))
             }
         case .snowflake:
-            seeds = web(c, reach) { $0.symmetry = 6; $0.growth = 1.45...1.6; $0.radiusJitter = 0; $0.forkChance = 0 }
+            // Six straight arms with mirrored side branches, like frost.
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            let base = rng.range(0, .pi * 2)
+            let length = min(reach * rng.range(0.6, 0.8), 520)
+            let spacing = rng.range(24, 36)
+            let branchAngle = rng.range(0.85, 1.15)
+            let lengths = stride(from: spacing, to: length, by: spacing).map { d in min((length - d) * 0.28, 48) * rng.range(0.75, 1.1) }
+            for arm in 0..<6 {
+                let angle = base + CGFloat(arm) * .pi / 3
+                let direction = CGPoint(angle: angle)
+                cracks.append(ProceduralCrack(points: [c, c + direction * length], start: 0))
+                for (step, branchLength) in lengths.enumerated() {
+                    let d = spacing * CGFloat(step + 1)
+                    let root = c + direction * d
+                    for side: CGFloat in [-1, 1] {
+                        let tip = root + CGPoint(angle: angle + side * branchAngle) * branchLength
+                        cracks.append(ProceduralCrack(points: [root, tip], start: d))
+                    }
+                }
+            }
+            cracks.append(ProceduralCrack(points: (0...6).map { c + CGPoint(angle: base + CGFloat($0) * .pi / 3) * 9 }, start: 0))
         case .crater:
-            seeds = web(c, reach) { $0.core = 45; $0.coreRadius = 34; $0.spokes = 20...24; $0.startRadius = 36...42; $0.growth = 1.6...1.8 }
+            // A pulverised dense core with a few long cracks escaping it.
+            seeds = (0..<75).map { _ in c + CGPoint(angle: rng.range(0, .pi * 2)) * (48 * sqrt(rng.unit())) }
+            seeds += web(c, reach) { $0.core = 0; $0.spokes = 6...9; $0.startRadius = 70...90; $0.growth = 2.4...3.0; $0.ringCap = 300...400 }
         case .chaos:
             let count = Int(bounds.width * bounds.height / 1300)
             seeds = (0..<count).map { _ in CGPoint(x: rng.range(bounds.minX, bounds.maxX), y: rng.range(bounds.minY, bounds.maxY)) }
         case .doubleTap:
-            let second = c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(130, 230)
+            let second = c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(55, 100)
             let first = web(c, reach)
             let other = web(second, reach)
             seeds = first.filter { ($0 - c).lengthSquared <= ($0 - second).lengthSquared }

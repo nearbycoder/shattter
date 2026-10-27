@@ -1,7 +1,8 @@
 import UIKit
 
-/// Crackgate: recreates the October 2026 iPhone Duo inner-display reports. A crunch on unfolding,
-/// a crack running down the centre crease, and a horizontal block of pixels stuck glowing white.
+/// Crackgate: recreates the October 2026 iPhone Duo inner-display reports. Something catches in the hinge
+/// while unfolding, one audible crack, a thin crack along the crease from a spot in its lower half,
+/// and a band of stuck bright pixels running from there across one half of the display.
 extension GlassView {
     func triggerCrackgate() {
         guard GagSettings.crackgate, !crackgateActive, phase == .intact, bounds.width > 0 else { return }
@@ -25,7 +26,9 @@ extension GlassView {
             vertical ? CGPoint(x: crease + v, y: u) : CGPoint(x: u, y: crease + v)
         }
         var rng = SeededRandom(seed: UInt64.random(in: 1...UInt64.max))
-        let originU = length * rng.range(0.3, 0.62)
+        // Reports put the break in the same spot every time: on the crease, in the lower half,
+        // just below where the display cable crosses the hinge.
+        let originU = length * rng.range(0.6, 0.67)
 
         func run(to end: CGFloat) -> [(u: CGFloat, v: CGFloat)] {
             var points: [(u: CGFloat, v: CGFloat)] = [(originU, 0)]
@@ -33,8 +36,9 @@ extension GlassView {
             var u = originU
             var v: CGFloat = 0
             while (end - u) * direction > 0 {
-                u += direction * rng.range(7, 15)
-                v = max(-7, min(7, v + rng.signed() * 2.4))
+                u += direction * rng.range(8, 16)
+                // A thin crack that hugs the fold line.
+                v = max(-3.5, min(3.5, v + rng.signed() * 1.4))
                 points.append((direction > 0 ? min(u, end) : max(u, end), v))
             }
             return points
@@ -48,101 +52,69 @@ extension GlassView {
             return path
         }
 
-        // Hairline branches peel off the main crack.
+        // A few short hairlines right at the stress point, nowhere else.
         let branches = CGMutablePath()
-        for main in [up, down] {
-            var index = Int(rng.range(2, 6))
-            while index < main.count - 1 {
-                var u = main[index].u, v = main[index].v
-                let side: CGFloat = rng.unit() < 0.5 ? 1 : -1
-                var heading = side * rng.range(0.45, 1.25) + (main.last!.u < originU ? .pi : 0)
-                var points = [map(u, v)]
-                for _ in 0..<Int(rng.range(2, 8)) {
-                    heading += rng.signed() * 0.25
-                    let step = rng.range(6, 12)
-                    u += cos(heading) * step
-                    v += sin(heading) * step
-                    points.append(map(u, v))
-                }
-                branches.addLines(between: points)
-                index += Int(rng.range(4, 10))
+        for _ in 0..<Int(rng.range(3, 7)) {
+            var u = originU + rng.signed() * 50
+            var v = rng.signed() * 2
+            var heading = rng.range(0, .pi * 2)
+            var points = [map(u, v)]
+            for _ in 0..<Int(rng.range(2, 5)) {
+                heading += rng.signed() * 0.3
+                let step = rng.range(4, 9)
+                u += cos(heading) * step
+                v += sin(heading) * step
+                points.append(map(u, v))
             }
-        }
-        // The spot where it gave way.
-        let star = CGMutablePath()
-        for _ in 0..<Int(rng.range(6, 10)) {
-            let angle = rng.range(0, .pi * 2)
-            let reach = rng.range(5, 26)
-            star.addLines(between: [map(originU, 0), map(originU + cos(angle) * reach, sin(angle) * reach)])
+            branches.addLines(between: points)
         }
 
+        // The sequence: something catches in the hinge, then one audible crack as it keeps opening.
+        let catchDelay: CFTimeInterval = 0.35
         let now = CACurrentMediaTime()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        addCrackStroke(star, begin: now, duration: 0.06)
-        addCrackStroke(path(up), begin: now + 0.04, duration: 0.28)
-        addCrackStroke(path(down), begin: now + 0.04, duration: 0.34)
-        addCrackStroke(branches, begin: now + 0.2, duration: 0.25)
+        addCrackStroke(path(up), begin: now + catchDelay, duration: 0.24)
+        addCrackStroke(path(down), begin: now + catchDelay, duration: 0.2)
+        addCrackStroke(branches, begin: now + catchDelay + 0.05, duration: 0.15)
 
-        // The stuck white pixel block, plus a couple of dead pixel lines.
-        let blockU = originU + rng.range(-90, 90)
-        let blockHeight = rng.range(14, 34)
-        let left = -across * rng.range(0.06, 0.3)
-        let right = across * rng.range(0.1, 0.45)
-        let blockRect = vertical
-            ? CGRect(x: crease + left, y: blockU, width: right - left, height: blockHeight)
-            : CGRect(x: blockU, y: crease + left, width: blockHeight, height: right - left)
-        let block = CALayer()
-        block.frame = blockRect
-        block.backgroundColor = UIColor.white.cgColor
-        block.shadowColor = UIColor.white.cgColor
-        block.shadowRadius = 10
-        block.shadowOpacity = 1
-        block.shadowOffset = .zero
-        block.opacity = 0
-        crackgateLayer.addSublayer(block)
+        // A band of stuck pixels runs from the break across one half of the display.
+        let towardFar = rng.unit() < 0.5
+        let thickness = rng.range(3, 9)
+        let reachEdge = across / 2 + 4
+        let bandStart: CGFloat = towardFar ? 0 : -reachEdge
+        let bandRect = vertical
+            ? CGRect(x: crease + bandStart, y: originU - thickness / 2, width: reachEdge, height: thickness)
+            : CGRect(x: originU - thickness / 2, y: crease + bandStart, width: thickness, height: reachEdge)
+        // Most reports describe white; iFixit also saw a green line.
+        let bandColor = rng.unit() < 0.8 ? UIColor.white : UIColor(red: 0.3, green: 1, blue: 0.35, alpha: 1)
+        let band = CALayer()
+        band.frame = bandRect
+        band.backgroundColor = bandColor.cgColor
+        band.shadowColor = bandColor.cgColor
+        band.shadowRadius = 6
+        band.shadowOpacity = 0.9
+        band.shadowOffset = .zero
+        band.opacity = 0
+        crackgateLayer.addSublayer(band)
         let glitch = CAKeyframeAnimation(keyPath: "opacity")
-        glitch.values = [0, 1, 0.25, 1, 0.6, 1]
+        glitch.values = [0, 1, 0.3, 1, 0.7, 1]
         glitch.keyTimes = [0, 0.15, 0.35, 0.55, 0.75, 1]
-        glitch.duration = 0.4
-        glitch.beginTime = now + 0.45
+        glitch.duration = 0.35
+        glitch.beginTime = now + catchDelay + 0.2
         glitch.fillMode = .forwards
         glitch.isRemovedOnCompletion = false
-        block.add(glitch, forKey: "glitch")
-
-        for color in [UIColor.green, UIColor.magenta] {
-            let line = CALayer()
-            let offset = rng.range(-30, 30)
-            let span = length * rng.range(0.25, 0.7)
-            let start = max(0, originU - span * rng.unit())
-            line.frame = vertical
-                ? CGRect(x: crease + offset, y: start, width: 1, height: span)
-                : CGRect(x: start, y: crease + offset, width: span, height: 1)
-            line.backgroundColor = color.withAlphaComponent(0.6).cgColor
-            line.opacity = 0
-            crackgateLayer.addSublayer(line)
-            let appear = CABasicAnimation(keyPath: "opacity")
-            appear.fromValue = 0
-            appear.toValue = 1
-            appear.duration = 0.1
-            appear.beginTime = now + 0.5
-            appear.fillMode = .forwards
-            appear.isRemovedOnCompletion = false
-            line.add(appear, forKey: "appear")
-        }
+        band.add(glitch, forKey: "glitch")
         CATransaction.commit()
 
-        GlassSound.shared.play(.crunch)
-        Haptics.shared.crunch()
-        shake(intensity: 6)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) { [weak self] in
-            guard self?.crackgateActive == true else { return }
+        Haptics.shared.hingeCatch()
+        GlassSound.shared.play(.crack, volume: 0.18, rate: 0.6)
+        DispatchQueue.main.asyncAfter(deadline: .now() + catchDelay) { [weak self] in
+            guard let self, self.crackgateActive else { return }
             GlassSound.shared.play(.crack)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-            guard self?.crackgateActive == true else { return }
-            GlassSound.shared.play(.crack, volume: 0.45)
-            Haptics.shared.crack(intensity: 0.6)
+            GlassSound.shared.play(.crunch, volume: 0.5)
+            Haptics.shared.crack(intensity: 1)
+            self.shake(intensity: 4)
         }
 
         crackgateWork?.cancel()
@@ -201,7 +173,7 @@ extension GlassView {
         title.font = UIFont.systemFont(ofSize: 20, weight: .heavy).rounded
         title.textColor = .white
         let body = UILabel()
-        body.text = "Apple is “aware of an issue impacting the inner display on a small number of iPhone Duo units.”\nOut-of-warranty repair: $999."
+        body.text = "“We’re aware of an issue impacting the inner display on a small number of iPhone Duo units.” Probably the hinge.\nOut-of-warranty repair: $999."
         body.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         body.textColor = UIColor.white.withAlphaComponent(0.85)
         body.numberOfLines = 0

@@ -396,6 +396,18 @@ final class Haptics {
         play(events, fallbackIntensity: 1)
     }
 
+    /// Something catching inside the hinge: a low grinding rumble with a couple of ticks.
+    func hingeCatch() {
+        play([
+            CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.45),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.1),
+            ], relativeTime: 0, duration: 0.3),
+            transient(0.08, intensity: 0.5, sharpness: 0.3),
+            transient(0.2, intensity: 0.6, sharpness: 0.35),
+        ], fallbackIntensity: 0.5)
+    }
+
     func chime() {
         play([transient(0, intensity: 0.4, sharpness: 1), transient(0.05, intensity: 0.25, sharpness: 1)], fallbackIntensity: 0.4)
     }
