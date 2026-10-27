@@ -12,6 +12,7 @@
 		2E0A3498B00EE2FD98BF4405 /* ScreenArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF39FC1367AE7B10D9D13367 /* ScreenArt.swift */; };
 		2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */; };
 		436CEF46868B7200C36CF793 /* FractureGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8956135F2C79C748B053B142 /* FractureGeometryTests.swift */; };
+		54026DAA9F7B92697CE9B7EF /* CrackPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C0D58DB66619D7400BDAB1 /* CrackPattern.swift */; };
 		58FA5A580C8860923B629997 /* PaneArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */; };
 		61FE7477F6D74F4511CC9888 /* GlassView+Shatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DF168158519D1C138F25D0A /* GlassView+Shatter.swift */; };
 		80FCF466C93F405D151D2445 /* GlassViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B161E3D8081E457AC14AAD3A /* GlassViewController.swift */; };
@@ -21,6 +22,7 @@
 		B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC6864BFAA2505C099EF0A /* GlassView.swift */; };
 		F0077ED46F62BB99F3AD35C0 /* GagSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938A8F2B526D240735913AC3 /* GagSettings.swift */; };
 		F259F3BD6D1EE56D77214EBB /* BackdropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64ABA4F99FA65142620E21BC /* BackdropView.swift */; };
+		FBC2D4152EE1E5D51D0FC4C5 /* GlassView+Crackgate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BD1460D194B7DB429E3FD6 /* GlassView+Crackgate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +41,7 @@
 		3523126620D0B460C6588B4F /* ShattterTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ShattterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C09FEF7F0FD83448DC5786A /* Shattter.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Shattter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64ABA4F99FA65142620E21BC /* BackdropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackdropView.swift; sourceTree = "<group>"; };
+		77C0D58DB66619D7400BDAB1 /* CrackPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrackPattern.swift; sourceTree = "<group>"; };
 		7ACC6864BFAA2505C099EF0A /* GlassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassView.swift; sourceTree = "<group>"; };
 		850C0280A91AF993F02D72E6 /* FractureGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractureGeometry.swift; sourceTree = "<group>"; };
 		8956135F2C79C748B053B142 /* FractureGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractureGeometryTests.swift; sourceTree = "<group>"; };
@@ -47,6 +50,7 @@
 		8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSound.swift; sourceTree = "<group>"; };
 		938A8F2B526D240735913AC3 /* GagSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GagSettings.swift; sourceTree = "<group>"; };
 		B161E3D8081E457AC14AAD3A /* GlassViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassViewController.swift; sourceTree = "<group>"; };
+		D3BD1460D194B7DB429E3FD6 /* GlassView+Crackgate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlassView+Crackgate.swift"; sourceTree = "<group>"; };
 		FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FBF2AA7F6D2DD0B7FD3ABCB5 /* OptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsView.swift; sourceTree = "<group>"; };
 		FF39FC1367AE7B10D9D13367 /* ScreenArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenArt.swift; sourceTree = "<group>"; };
@@ -73,8 +77,10 @@
 			isa = PBXGroup;
 			children = (
 				64ABA4F99FA65142620E21BC /* BackdropView.swift */,
+				77C0D58DB66619D7400BDAB1 /* CrackPattern.swift */,
 				850C0280A91AF993F02D72E6 /* FractureGeometry.swift */,
 				7ACC6864BFAA2505C099EF0A /* GlassView.swift */,
+				D3BD1460D194B7DB429E3FD6 /* GlassView+Crackgate.swift */,
 				0DF168158519D1C138F25D0A /* GlassView+Shatter.swift */,
 				B161E3D8081E457AC14AAD3A /* GlassViewController.swift */,
 				132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */,
@@ -242,9 +248,11 @@
 			files = (
 				1E09512DCA09EE158A967387 /* AppDelegate.swift in Sources */,
 				F259F3BD6D1EE56D77214EBB /* BackdropView.swift in Sources */,
+				54026DAA9F7B92697CE9B7EF /* CrackPattern.swift in Sources */,
 				94DA14363944BB95A9745DC1 /* FractureGeometry.swift in Sources */,
 				F0077ED46F62BB99F3AD35C0 /* GagSettings.swift in Sources */,
 				2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */,
+				FBC2D4152EE1E5D51D0FC4C5 /* GlassView+Crackgate.swift in Sources */,
 				61FE7477F6D74F4511CC9888 /* GlassView+Shatter.swift in Sources */,
 				B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */,
 				80FCF466C93F405D151D2445 /* GlassViewController.swift in Sources */,

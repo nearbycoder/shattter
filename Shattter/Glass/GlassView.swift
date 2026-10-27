@@ -20,6 +20,7 @@ final class GlassView: UIView {
     struct CrackSet {
         let id: Int
         let origin: FractureOrigin
+        var style: CrackPattern = .spiderWeb
         var pattern: FracturePattern?
         /// Translation applied to the pattern; pooled webs are built around the origin.
         var offset: CGPoint
@@ -69,6 +70,7 @@ final class GlassView: UIView {
     let shardLayer = CALayer()
     let sparkLayer = CAEmitterLayer()
     let flashLayer = CALayer()
+    let crackgateLayer = CALayer()
     let intro = UIStackView()
     let introTitle = UILabel()
     let introHint = UILabel()
@@ -93,8 +95,9 @@ final class GlassView: UIView {
     var crackleTravel: CGFloat = 0
     var lastCrackle: CFTimeInterval = 0
     var drawnSignature: CGFloat = -1
-    var webPool: [FracturePattern] = []
+    var webPool: [(style: CrackPattern, pattern: FracturePattern)] = []
     var webPoolExtent: CGFloat = 0
+    var webPoolSetting = CrackPattern.random
     var webPoolPending = 0
     var finishTime: CFTimeInterval = 0
     var finishImpulse: FractureOrigin?
@@ -125,7 +128,14 @@ final class GlassView: UIView {
     var hingePose = HingePose.unavailable
     var lastPan = CGPoint.zero
     var introPending = true
+    var unfoldedAt: CFTimeInterval = -10
     let motion = CMMotionManager()
+
+    // Crackgate
+    var crackgateActive = false
+    var crackgateTime: CFTimeInterval = 0
+    var crackgateCard: UIView?
+    var crackgateWork: DispatchWorkItem?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -209,6 +219,7 @@ final class GlassView: UIView {
         impactGlow.endPoint = CGPoint(x: 1, y: 1)
         impactGlow.opacity = 0
         glassLayer.addSublayer(impactGlow)
+        glassLayer.addSublayer(crackgateLayer)
 
         stage.layer.addSublayer(glassLayer)
 
@@ -290,7 +301,7 @@ final class GlassView: UIView {
         CATransaction.setDisableActions(true)
         stage.frame = bounds
         backdrop.frame = bounds
-        for layer in [glassLayer, paneLayer, shardLayer, flashLayer, crackShadow, crackGlow, crackCore] as [CALayer] {
+        for layer in [glassLayer, paneLayer, shardLayer, flashLayer, crackShadow, crackGlow, crackCore, crackgateLayer] as [CALayer] {
             layer.frame = bounds
         }
         let diagonal = hypot(bounds.width, bounds.height)
@@ -319,9 +330,10 @@ final class GlassView: UIView {
     }
 
     var hintText: String {
+        if GagSettings.crackgate { return "Crackgate mode: unfold it… or tap" }
         switch hingePose {
-        case .partiallyOpen, .fullyOpen: "Bend the hinge or tap the glass"
-        case .closed, .unavailable: "Tap the glass"
+        case .partiallyOpen, .fullyOpen: return "Bend the hinge or tap the glass"
+        case .closed, .unavailable: return "Tap the glass"
         }
     }
 
@@ -339,6 +351,7 @@ final class GlassView: UIView {
 
     func resetPane(showIntro: Bool) {
         repairWork?.cancel()
+        clearCrackgate()
         clearShards()
         clearCracks()
         phase = .intact
@@ -349,6 +362,10 @@ final class GlassView: UIView {
         glassLayer.transform = CATransform3DIdentity
         stopDisplayLink()
         refillWebPool()
+        // Just unfolded onto the inner display: Crackgate strikes as the phone opens.
+        if GagSettings.crackgate, CACurrentMediaTime() - unfoldedAt < 2 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in self?.triggerCrackgate() }
+        }
         if showIntro, screen == .glass {
             introPending = false
             presentIntro()
@@ -427,6 +444,14 @@ final class GlassView: UIView {
     @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
         let point = recognizer.location(in: self)
         hideIntro()
+        if crackgateActive {
+            if CACurrentMediaTime() - crackgateTime > 1.2 { repairCrackgate() }
+            return
+        }
+        if GagSettings.crackgate, phase == .intact {
+            triggerCrackgate()
+            return
+        }
         switch phase {
         case .intact, .cracked:
             registerHit(at: point)
@@ -453,12 +478,20 @@ final class GlassView: UIView {
     }
 
     override func accessibilityActivate() -> Bool {
+        if GagSettings.crackgate {
+            crackgateActive ? repairCrackgate() : triggerCrackgate()
+            return true
+        }
         if phase == .intact || phase == .cracked { registerHit(at: bounds.center) }
         return true
     }
 
     /// A shake smashes the pane outright.
     func smashCenter() {
+        if GagSettings.crackgate {
+            triggerCrackgate()
+            return
+        }
         guard phase == .intact || phase == .cracked else { return }
         hideIntro()
         finish(impulse: .point(bounds.center))
@@ -471,6 +504,12 @@ final class GlassView: UIView {
         hingeAngle = angle
         hingeTime = now
         if pose != hingePose {
+            if hingePose == .closed, pose == .partiallyOpen || pose == .fullyOpen {
+                unfoldedAt = now
+                if GagSettings.crackgate {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in self?.triggerCrackgate() }
+                }
+            }
             hingePose = pose
             introHint.text = hintText
         }
@@ -537,6 +576,11 @@ final class GlassView: UIView {
 
     /// Hinge movement (radians) or an equivalent two-finger bend.
     func flex(by delta: CGFloat, rate: CGFloat) {
+        if GagSettings.crackgate {
+            // The unfold itself is handled once the inner display is up.
+            if CACurrentMediaTime() - unfoldedAt > 1.5 { triggerCrackgate() }
+            return
+        }
         guard phase == .intact || phase == .cracked, paneImage != nil else { return }
         hideIntro()
         if hingeSetID == nil {
@@ -587,16 +631,20 @@ final class GlassView: UIView {
         min(bounds.width, bounds.height) * CGFloat.random(in: 0.24...0.4) + 30
     }
 
+    /// Adds a crack web in the chosen pattern; pre-built webs make it instant, screen-shaped ones are cut on demand.
     private func addPointCrack(at point: CGPoint, radius: CGFloat, full: Bool = false) {
         let id = nextCrackID
         nextCrackID += 1
-        var set = CrackSet(id: id, origin: .point(point), offset: point, target: radius, isFull: full)
-        if let web = webPool.popLast() {
-            set.pattern = web
-            set.front = min(radius * 0.3, 40)
+        let setting = GagSettings.crackPattern
+        var style = setting.resolved()
+        if setting == .random, !style.needsScreen, let last = webPool.last { style = last.style }
+        var set = CrackSet(id: id, origin: .point(point), style: style, offset: point, target: radius * style.localScale, isFull: full)
+        if !style.needsScreen, webPoolSetting == setting, let index = webPool.lastIndex(where: { $0.style == style }) {
+            set.pattern = webPool.remove(at: index).pattern
+            set.front = min(set.target * 0.3, 40)
         } else {
             set.offset = .zero
-            buildCrackPattern(for: id, origin: .point(point))
+            buildCrackPattern(for: id, origin: .point(point), style: style)
         }
         crackSets.append(set)
         refillWebPool()
@@ -605,33 +653,39 @@ final class GlassView: UIView {
     /// Crack webs built around (0, 0) ahead of time, so a tap cracks instantly.
     func refillWebPool() {
         let extent = max(bounds.width, bounds.height)
-        guard extent > 0 else { return }
-        if abs(extent - webPoolExtent) > 1 {
+        let setting = GagSettings.crackPattern
+        guard extent > 0, !setting.needsScreen else { return }
+        if abs(extent - webPoolExtent) > 1 || setting != webPoolSetting {
             webPool.removeAll()
             webPoolExtent = extent
+            webPoolSetting = setting
         }
         let needed = 3 - webPool.count - webPoolPending
         guard needed > 0 else { return }
         webPoolPending += needed
         let square = CGRect(x: -extent, y: -extent, width: extent * 2, height: extent * 2)
+        let pooled = CrackPattern.concrete.filter { !$0.needsScreen }
         for _ in 0..<needed {
             let seed = UInt64.random(in: 1...UInt64.max)
+            let style = setting == .random ? (pooled.randomElement() ?? .spiderWeb) : setting
             DispatchQueue.global(qos: .utility).async { [weak self] in
-                let web = FractureBuilder.pattern(origin: .point(.zero), bounds: square, seed: seed)
+                let web = FractureBuilder.pattern(origin: .point(.zero), style: style, bounds: square, seed: seed)
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.webPoolPending -= 1
-                    if abs(self.webPoolExtent - extent) < 1 { self.webPool.append(web) }
+                    if abs(self.webPoolExtent - extent) < 1, self.webPoolSetting == setting {
+                        self.webPool.append((style, web))
+                    }
                 }
             }
         }
     }
 
-    private func buildCrackPattern(for id: Int, origin: FractureOrigin) {
+    private func buildCrackPattern(for id: Int, origin: FractureOrigin, style: CrackPattern = .spiderWeb) {
         let bounds = bounds
         let seed = UInt64.random(in: 1...UInt64.max)
         DispatchQueue.global(qos: .userInteractive).async { [weak self] in
-            let pattern = FractureBuilder.pattern(origin: origin, bounds: bounds, seed: seed)
+            let pattern = FractureBuilder.pattern(origin: origin, style: style, bounds: bounds, seed: seed)
             DispatchQueue.main.async {
                 guard let self, let index = self.crackSets.firstIndex(where: { $0.id == id }) else { return }
                 self.crackSets[index].pattern = pattern
@@ -647,6 +701,7 @@ final class GlassView: UIView {
         let token = finalToken
         latestToken.set(token)
         let origins = crackSets.map(\.origin)
+        let styles = crackSets.map(\.style)
         guard !origins.isEmpty else { return }
         let bounds = bounds
         let scale = min(screenScale, 2)
@@ -655,7 +710,7 @@ final class GlassView: UIView {
         let latest = latestToken
         buildQueue.async { [weak self] in
             guard latest.current == token else { return }
-            let pattern = FractureBuilder.pattern(origins: origins, bounds: bounds, seed: seed)
+            let pattern = FractureBuilder.pattern(origins: origins, styles: styles, bounds: bounds, seed: seed)
             guard latest.current == token else { return }
             let sprites = ShardRenderer.render(pattern: pattern, pane: pane, scale: scale, edge: edge)
             DispatchQueue.main.async {

@@ -108,37 +108,261 @@ extension Array where Element == FractureOrigin {
 }
 
 enum FractureBuilder {
-    static func pattern(origin: FractureOrigin, bounds: CGRect, seed: UInt64) -> FracturePattern {
-        pattern(origins: [origin], bounds: bounds, seed: seed)
+    /// A crack drawn along a path rather than along shard outlines.
+    struct ProceduralCrack {
+        var points: [CGPoint]
+        /// Crack front distance at which it starts to appear.
+        var start: CGFloat
+    }
+
+    static func pattern(origin: FractureOrigin, style: CrackPattern = .spiderWeb, bounds: CGRect, seed: UInt64) -> FracturePattern {
+        pattern(origins: [origin], styles: [style], bounds: bounds, seed: seed)
     }
 
     /// One fracture combining several impacts; each origin keeps the glass nearest to it.
-    static func pattern(origins: [FractureOrigin], bounds: CGRect, seed: UInt64) -> FracturePattern {
+    static func pattern(origins: [FractureOrigin], styles: [CrackPattern] = [], bounds: CGRect, seed: UInt64) -> FracturePattern {
         var rng = SeededRandom(seed: seed)
         var seeds: [CGPoint] = []
+        var procedural: [ProceduralCrack] = []
+        var showCellEdges = false
         for (index, origin) in origins.enumerated() {
-            let own = seedPoints(origin: origin, bounds: bounds, rng: &rng)
+            let style = index < styles.count ? styles[index].resolved() : .spiderWeb
+            let generated = generate(origin, style: style, bounds: bounds, rng: &rng)
+            procedural += generated.cracks
+            if case .line = origin { showCellEdges = true } else if style.showsCellEdges { showCellEdges = true }
             guard origins.count > 1 else {
-                seeds = own
+                seeds = generated.seeds
                 break
             }
-            seeds += own.filter { seed in
+            seeds += generated.seeds.filter { seed in
                 let mine = origin.distance(to: seed)
                 return origins.indices.allSatisfy { $0 == index || mine <= origins[$0].distance(to: seed) }
             }
         }
         let cells = voronoiCells(seeds: seeds, bounds: bounds)
-        return assemble(cells: cells, origins: origins, bounds: bounds, seed: seed, rng: &rng)
+        return assemble(cells: cells, origins: origins, bounds: bounds, seed: seed, showCellEdges: showCellEdges, procedural: procedural, rng: &rng)
     }
 
     // MARK: Seeds
+
+    /// Shard seeds and any procedural cracks for one origin in a given pattern.
+    static func generate(_ origin: FractureOrigin, style: CrackPattern, bounds: CGRect, rng: inout SeededRandom) -> (seeds: [CGPoint], cracks: [ProceduralCrack]) {
+        guard case .point(let c) = origin else {
+            return (seedPoints(origin: origin, bounds: bounds, rng: &rng), [])
+        }
+        let reach = (bounds.corners.map { (c - $0).length }.max() ?? 1) * 1.05
+        var seeds: [CGPoint] = []
+        var cracks: [ProceduralCrack] = []
+        func web(_ center: CGPoint, _ reach: CGFloat, _ configure: (inout WebStyle) -> Void = { _ in }) -> [CGPoint] {
+            var style = WebStyle()
+            configure(&style)
+            return webSeeds(center: center, reach: reach, style: style, rng: &rng)
+        }
+
+        switch style {
+        case .random, .spiderWeb:
+            seeds = web(c, reach)
+        case .bullseye:
+            seeds = web(c, reach) {
+                $0.spokes = 8...11; $0.growth = 1.17...1.28; $0.ringCap = 30...45
+                $0.radiusJitter = 0.02; $0.forkChance = 0.05; $0.wideForkChance = 0.25
+            }
+        case .starburst:
+            seeds = web(c, reach) {
+                $0.spokes = 34...44; $0.growth = 2.3...3.0; $0.ringCap = 260...360
+                $0.forkChance = 0.3; $0.wideForkChance = 0.7
+            }
+        case .buckshot:
+            for _ in 0..<Int(rng.range(5, 9)) {
+                let sub = c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(15, 85)
+                seeds += web(sub, 70) {
+                    $0.spokes = 10...14; $0.startRadius = 6...10; $0.growth = 1.5...1.7; $0.core = 4; $0.coreRadius = 6
+                }
+            }
+            seeds += web(c, reach) { $0.spokes = 14...18; $0.startRadius = 110...130; $0.growth = 1.6...1.9; $0.core = 0 }
+        case .lightning:
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            let bolts = Int(rng.range(5, 8))
+            let base = rng.range(0, .pi * 2)
+            for bolt in 0..<bolts {
+                let angle = base + CGFloat(bolt) * .pi * 2 / CGFloat(bolts) + rng.signed() * 0.4
+                walk(from: c, angle: angle, length: reach * rng.range(0.5, 0.95), step: 10...18, wiggle: 0.3,
+                     branchChance: 0.15, depth: 0, reveal: 0, bounds: nil, rng: &rng, into: &cracks)
+            }
+        case .tempered:
+            let spacing = rng.range(24, 32)
+            var y = c.y - reach
+            while y < c.y + reach {
+                var x = c.x - reach
+                while x < c.x + reach {
+                    let p = CGPoint(x: x + rng.signed() * spacing * 0.35, y: y + rng.signed() * spacing * 0.35)
+                    if (p - c).length < reach { seeds.append(p) }
+                    x += spacing
+                }
+                y += spacing
+            }
+            seeds += (0..<8).map { _ in c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(2, 10) }
+        case .shear:
+            let angle = rng.range(0.45, 1.1) * (rng.unit() < 0.5 ? 1 : -1) + (rng.unit() < 0.5 ? 0 : .pi / 2)
+            let along = CGPoint(angle: angle)
+            let normal = along.perpendicular
+            let spacing = rng.range(30, 60)
+            let half = hypot(bounds.width, bounds.height)
+            let lines = Int(half / spacing) + 1
+            for n in -lines...lines {
+                let offset = CGFloat(n) * spacing + rng.signed() * spacing * 0.2
+                let center = c + normal * offset
+                for direction: CGFloat in [-1, 1] {
+                    var points = [center]
+                    var t: CGFloat = 0
+                    var drift: CGFloat = 0
+                    while t < half {
+                        t += rng.range(16, 26)
+                        drift = max(-6, min(6, drift + rng.signed() * 2.5))
+                        points.append(center + along * (t * direction) + normal * drift)
+                    }
+                    cracks.append(ProceduralCrack(points: points, start: abs(offset) * 0.9))
+                }
+                // Strips of glass between neighbouring cracks.
+                var t = -half
+                while t < half {
+                    seeds.append(c + normal * (offset + spacing / 2) + along * t)
+                    t += rng.range(40, 70)
+                }
+            }
+        case .cornerDrop:
+            let corner = bounds.corners.min { ($0 - c).lengthSquared < ($1 - c).lengthSquared } ?? c
+            let inward = (bounds.center - corner).normalized * 3
+            seeds = web(corner + inward, hypot(bounds.width, bounds.height) * 1.05) {
+                $0.spokes = 44...54; $0.growth = 1.5...1.7; $0.startRadius = 12...18
+            }
+        case .pebble:
+            seeds = web(c, 70) { $0.spokes = 9...12; $0.startRadius = 6...9; $0.growth = 1.4...1.6; $0.core = 6; $0.coreRadius = 5 }
+            seeds += web(c, reach) { $0.spokes = 12...16; $0.startRadius = 90...110; $0.growth = 1.7...2.0; $0.core = 0 }
+        case .hairline:
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            for _ in 0..<Int(rng.range(80, 130)) {
+                let distance = reach * 0.8 * pow(rng.unit(), 1.6)
+                let start = c + CGPoint(angle: rng.range(0, .pi * 2)) * distance
+                var heading = rng.range(0, .pi * 2)
+                var points = [start]
+                var p = start
+                for _ in 0..<Int(rng.range(2, 5)) {
+                    heading += rng.signed() * 0.5
+                    p = p + CGPoint(angle: heading) * rng.range(5, 14) * (1 + distance / reach)
+                    points.append(p)
+                }
+                cracks.append(ProceduralCrack(points: points, start: distance))
+            }
+        case .spiral:
+            let direction: CGFloat = rng.unit() < 0.5 ? 1 : -1
+            seeds = web(c, reach) { $0.spokes = 18...22; $0.twist = 1.5 * direction; $0.growth = 1.35...1.5; $0.ringCap = 60...80 }
+        case .honeycomb:
+            let spacing = rng.range(30, 38)
+            let rowHeight = spacing * 0.866
+            var row = 0
+            var y = c.y - reach
+            while y < c.y + reach {
+                var x = c.x - reach + (row % 2 == 0 ? 0 : spacing / 2)
+                while x < c.x + reach {
+                    let p = CGPoint(x: x + rng.signed() * spacing * 0.08, y: y + rng.signed() * spacing * 0.08)
+                    if (p - c).length < reach { seeds.append(p) }
+                    x += spacing
+                }
+                y += rowHeight
+                row += 1
+            }
+        case .daggers:
+            seeds = web(c, reach) {
+                $0.spokes = 7...10; $0.growth = 2.6...3.4; $0.ringCap = 400...500
+                $0.forkChance = 0.2; $0.radiusJitter = 0.15; $0.spokeJitter = 0.5
+            }
+        case .edgeSplit:
+            seeds = web(c, reach)
+            let perimeter = 2 * (bounds.width + bounds.height)
+            for _ in 0..<Int(rng.range(12, 19)) {
+                var d = rng.range(0, perimeter)
+                let start: CGPoint
+                if d < bounds.width { start = CGPoint(x: bounds.minX + d, y: bounds.minY) } else {
+                    d -= bounds.width
+                    if d < bounds.height { start = CGPoint(x: bounds.maxX, y: bounds.minY + d) } else {
+                        d -= bounds.height
+                        if d < bounds.width { start = CGPoint(x: bounds.maxX - d, y: bounds.maxY) } else {
+                            start = CGPoint(x: bounds.minX, y: bounds.maxY - (d - bounds.width))
+                        }
+                    }
+                }
+                let toward = c - start
+                let angle = atan2(toward.y, toward.x) + rng.signed() * 0.5
+                walk(from: start, angle: angle, length: toward.length * rng.range(0.25, 0.6), step: 12...18, wiggle: 0.25,
+                     branchChance: 0.06, depth: 0, reveal: 0, bounds: nil, rng: &rng, into: &cracks)
+            }
+            for _ in 0..<6 {
+                let angle = rng.range(0, .pi * 2)
+                cracks.append(ProceduralCrack(points: [c, c + CGPoint(angle: angle) * rng.range(8, 28)], start: 0))
+            }
+        case .ripple:
+            seeds = web(c, reach) { $0.spokes = 16...20; $0.growth = 1.22...1.32; $0.ringCap = 50...70; $0.wave = 0.08 }
+        case .faultLine:
+            seeds = web(c, reach) { $0.spokes = 12...16; $0.growth = 1.7...2.0 }
+            let angle = rng.range(0, .pi)
+            for direction: CGFloat in [0, .pi] {
+                walk(from: c, angle: angle + direction, length: hypot(bounds.width, bounds.height), step: 12...20, wiggle: 0.12,
+                     branchChance: 0.2, depth: 0, reveal: 0, bounds: bounds, rng: &rng, into: &cracks)
+            }
+            for _ in 0..<8 {
+                cracks.append(ProceduralCrack(points: [c, c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(18, 55)], start: 0))
+            }
+        case .snowflake:
+            seeds = web(c, reach) { $0.symmetry = 6; $0.growth = 1.45...1.6; $0.radiusJitter = 0; $0.forkChance = 0 }
+        case .crater:
+            seeds = web(c, reach) { $0.core = 45; $0.coreRadius = 34; $0.spokes = 20...24; $0.startRadius = 36...42; $0.growth = 1.6...1.8 }
+        case .chaos:
+            let count = Int(bounds.width * bounds.height / 1300)
+            seeds = (0..<count).map { _ in CGPoint(x: rng.range(bounds.minX, bounds.maxX), y: rng.range(bounds.minY, bounds.maxY)) }
+        case .doubleTap:
+            let second = c + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(130, 230)
+            let first = web(c, reach)
+            let other = web(second, reach)
+            seeds = first.filter { ($0 - c).lengthSquared <= ($0 - second).lengthSquared }
+                + other.filter { ($0 - second).lengthSquared < ($0 - c).lengthSquared }
+        }
+        return (seeds.filter { bounds.insetBy(dx: -0.5, dy: -0.5).contains($0) }, cracks)
+    }
+
+    /// A wandering crack that occasionally forks.
+    private static func walk(
+        from start: CGPoint, angle: CGFloat, length: CGFloat, step: ClosedRange<CGFloat>, wiggle: CGFloat,
+        branchChance: CGFloat, depth: Int, reveal: CGFloat, bounds: CGRect?,
+        rng: inout SeededRandom, into cracks: inout [ProceduralCrack]
+    ) {
+        var points = [start]
+        var position = start
+        var heading = angle
+        var travelled: CGFloat = 0
+        while travelled < length {
+            heading += rng.signed() * wiggle
+            let stride = rng.range(step.lowerBound, step.upperBound)
+            position = position + CGPoint(angle: heading) * stride
+            travelled += stride
+            points.append(position)
+            if let bounds, !bounds.insetBy(dx: -20, dy: -20).contains(position) { break }
+            if depth < 2, rng.unit() < branchChance, length - travelled > 40 {
+                let side: CGFloat = rng.unit() < 0.5 ? 1 : -1
+                walk(from: position, angle: heading + side * rng.range(0.4, 0.9), length: (length - travelled) * rng.range(0.25, 0.55),
+                     step: step, wiggle: wiggle * 1.2, branchChance: branchChance * 0.7, depth: depth + 1,
+                     reveal: reveal + travelled, bounds: bounds, rng: &rng, into: &cracks)
+            }
+        }
+        if points.count > 1 { cracks.append(ProceduralCrack(points: points, start: reveal)) }
+    }
 
     static func seedPoints(origin: FractureOrigin, bounds: CGRect, rng: inout SeededRandom) -> [CGPoint] {
         var points: [CGPoint] = []
         switch origin {
         case .point(let center):
             let reach = bounds.corners.map { (center - $0).length }.max() ?? 1
-            points = webSeeds(center: center, reach: reach * 1.05, rng: &rng)
+            points = webSeeds(center: center, reach: reach * 1.05, style: WebStyle(), rng: &rng)
         case .line(let a, let b):
             // Stress webs strung along the crease, each owning its stretch of glass.
             let along = (b - a).normalized
@@ -151,7 +375,7 @@ enum FractureBuilder {
             }
             let reach = bounds.corners.map { corner in centers.map { (corner - $0).length }.min() ?? 0 }.max() ?? 1
             for (index, center) in centers.enumerated() {
-                let web = webSeeds(center: center, reach: reach * 1.1, rng: &rng)
+                let web = webSeeds(center: center, reach: reach * 1.1, style: WebStyle(), rng: &rng)
                 points += web.filter { seed in
                     let own = (seed - center).lengthSquared
                     return centers.indices.allSatisfy { $0 == index || own <= (seed - centers[$0]).lengthSquared }
@@ -172,30 +396,46 @@ enum FractureBuilder {
 
     /// Seeds whose Voronoi cells form a spider-web impact: radial cracks that occasionally fork,
     /// crossed by staggered concentric rings that thin out with distance.
-    private static func webSeeds(center: CGPoint, reach: CGFloat, rng: inout SeededRandom) -> [CGPoint] {
+    private static func webSeeds(center: CGPoint, reach: CGFloat, style: WebStyle, rng: inout SeededRandom) -> [CGPoint] {
         var points: [CGPoint] = []
-        for _ in 0..<9 {
-            points.append(center + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(2, 14))
+        for _ in 0..<style.core {
+            points.append(center + CGPoint(angle: rng.range(0, .pi * 2)) * rng.range(2, style.coreRadius))
         }
-        let spokeCount = Int(rng.range(22, 28))
         let base = rng.range(0, .pi * 2)
-        var spokes = (0..<spokeCount).map { index in
-            base + (CGFloat(index) + rng.signed() * 0.35) * (.pi * 2 / CGFloat(spokeCount))
-        }
-        var radius = rng.range(16, 22)
-        while radius < reach {
-            for angle in spokes {
-                let r = radius * rng.range(0.95, 1.05)
-                points.append(center + CGPoint(angle: angle + rng.signed() * 0.012) * r)
+        var spokes: [CGFloat]
+        var symmetricJitter: [CGFloat] = []
+        if style.symmetry > 0 {
+            let perUnit = Int(rng.range(2, 4))
+            let count = style.symmetry * perUnit
+            spokes = (0..<count).map { base + CGFloat($0) * .pi * 2 / CGFloat(count) }
+            symmetricJitter = (0..<perUnit).map { _ in rng.range(0.9, 1.1) }
+        } else {
+            let count = Int(rng.range(style.spokes.lowerBound, style.spokes.upperBound))
+            spokes = (0..<count).map { index in
+                base + (CGFloat(index) + rng.signed() * style.spokeJitter) * (.pi * 2 / CGFloat(count))
             }
-            radius = min(radius * rng.range(1.6, 1.85), radius + rng.range(95, 140))
+        }
+        let wavePhase = rng.range(0, .pi * 2)
+        let start = rng.range(style.startRadius.lowerBound, style.startRadius.upperBound)
+        var radius = start
+        while radius < reach {
+            for (index, angle) in spokes.enumerated() {
+                var r = radius * rng.range(1 - style.radiusJitter, 1 + style.radiusJitter)
+                if !symmetricJitter.isEmpty { r = radius * symmetricJitter[index % symmetricJitter.count] }
+                if style.wave > 0 { r *= 1 + style.wave * sin(angle * 5 + wavePhase) }
+                let twisted = angle + style.twist * log(max(r, 1) / start) + (style.symmetry > 0 ? 0 : rng.signed() * 0.012)
+                points.append(center + CGPoint(angle: twisted) * r)
+            }
+            radius = min(radius * rng.range(style.growth.lowerBound, style.growth.upperBound),
+                         radius + rng.range(style.ringCap.lowerBound, style.ringCap.upperBound))
+            guard style.symmetry == 0 else { continue }
             // Radial cracks fork as they travel.
             var forked: [CGFloat] = []
             for (index, angle) in spokes.enumerated() {
                 forked.append(angle)
                 let next = index + 1 < spokes.count ? spokes[index + 1] : spokes[0] + .pi * 2
                 let arc = (next - angle) * radius
-                if (arc > 80 && rng.unit() < 0.55) || (next - angle > 0.26 && rng.unit() < 0.12) {
+                if (arc > 80 && rng.unit() < style.wideForkChance) || (next - angle > 0.26 && rng.unit() < style.forkChance) {
                     forked.append(angle + (next - angle) * rng.range(0.4, 0.6))
                 }
             }
@@ -206,26 +446,68 @@ enum FractureBuilder {
 
     // MARK: Voronoi
 
-    /// Voronoi cells clipped to `bounds`, built by successive half-plane clipping.
+    /// Voronoi cells clipped to `bounds`, built by half-plane clipping against nearby seeds found through a grid.
     static func voronoiCells(seeds: [CGPoint], bounds: CGRect) -> [[CGPoint]] {
+        guard !seeds.isEmpty else { return [] }
         let rect = bounds.corners
+        let cellSize = max(sqrt(bounds.width * bounds.height / CGFloat(seeds.count)) * 1.2, 4)
+        func coordinates(_ p: CGPoint) -> (Int, Int) {
+            (Int(floor((p.x - bounds.minX) / cellSize)), Int(floor((p.y - bounds.minY) / cellSize)))
+        }
+        func key(_ x: Int, _ y: Int) -> Int64 { Int64(x) << 32 | Int64(UInt32(bitPattern: Int32(y))) }
+        var grid: [Int64: [Int]] = [:]
+        for (index, seed) in seeds.enumerated() {
+            let (x, y) = coordinates(seed)
+            grid[key(x, y), default: []].append(index)
+        }
+        let maxRing = Int(ceil(max(bounds.width, bounds.height) / cellSize)) + 2
+
         var cells: [[CGPoint]] = []
         cells.reserveCapacity(seeds.count)
+        var candidates: [(index: Int, d2: CGFloat)] = []
         for i in seeds.indices {
             let s = seeds[i]
-            let others = seeds.indices
-                .filter { $0 != i }
-                .map { (index: $0, d2: (seeds[$0] - s).lengthSquared) }
-                .sorted { $0.d2 < $1.d2 }
+            let (cx, cy) = coordinates(s)
             var polygon = rect
             var farthest = polygon.map { ($0 - s).lengthSquared }.max() ?? 0
-            for other in others {
-                if other.d2 < 1e-6 { continue }
-                // The bisector lies at half the distance; beyond the farthest vertex it cannot clip.
-                if other.d2 > 4 * farthest { break }
-                polygon = clip(polygon, closerTo: s, than: seeds[other.index])
-                if polygon.count < 3 { break }
-                farthest = polygon.map { ($0 - s).lengthSquared }.max() ?? 0
+            var ring = 0
+            ringLoop: while ring <= maxRing {
+                candidates.removeAll(keepingCapacity: true)
+                func gather(_ x: Int, _ y: Int) {
+                    for j in grid[key(x, y)] ?? [] where j != i {
+                        candidates.append((j, (seeds[j] - s).lengthSquared))
+                    }
+                }
+                if ring == 0 {
+                    gather(cx, cy)
+                } else {
+                    for dx in -ring...ring {
+                        gather(cx + dx, cy - ring)
+                        gather(cx + dx, cy + ring)
+                    }
+                    if ring > 1 {
+                        for dy in (-ring + 1)...(ring - 1) {
+                            gather(cx - ring, cy + dy)
+                            gather(cx + ring, cy + dy)
+                        }
+                    } else {
+                        gather(cx - 1, cy)
+                        gather(cx + 1, cy)
+                    }
+                }
+                candidates.sort { $0.d2 < $1.d2 }
+                for candidate in candidates {
+                    if candidate.d2 < 1e-6 { continue }
+                    // The bisector lies at half the distance; beyond the farthest vertex it cannot clip.
+                    if candidate.d2 > 4 * farthest { break }
+                    polygon = clip(polygon, closerTo: s, than: seeds[candidate.index])
+                    if polygon.count < 3 { break ringLoop }
+                    farthest = polygon.map { ($0 - s).lengthSquared }.max() ?? 0
+                }
+                // Seeds in the next ring are at least `ring` cells away.
+                let nearestNext = CGFloat(ring) * cellSize
+                if nearestNext * nearestNext > 4 * farthest { break }
+                ring += 1
             }
             if polygon.count >= 3, abs(signedArea(polygon)) > 0.25 {
                 cells.append(polygon)
@@ -273,6 +555,8 @@ enum FractureBuilder {
         origins: [FractureOrigin],
         bounds: CGRect,
         seed: UInt64,
+        showCellEdges: Bool = true,
+        procedural: [ProceduralCrack] = [],
         rng: inout SeededRandom
     ) -> FracturePattern {
         // Snap shared Voronoi vertices so neighbouring shards share identical edges.
@@ -384,7 +668,7 @@ enum FractureBuilder {
 
         var cracks: [FracturePattern.Crack] = []
         var reach: CGFloat = 1
-        for key in edgeKeys.sorted(by: { ($0.a, $0.b) < ($1.a, $1.b) }) {
+        for key in edgeKeys.sorted(by: { ($0.a, $0.b) < ($1.a, $1.b) }) where showCellEdges {
             var line = polyline(key)
             var near = origins.distance(to: line[0])
             var far = origins.distance(to: line[line.count - 1])
@@ -404,6 +688,14 @@ enum FractureBuilder {
             let shape = lobe(last)
             let straggle = radial > 0.75 ? 0.6 + 1.3 * pow(shape, 1.5) : min(0.6 + 0.5 * shape, 1)
             cracks.append(.init(points: line, revealStart: start, revealEnd: end, straggle: straggle))
+        }
+
+        for crack in procedural {
+            var length: CGFloat = 0
+            for index in 1..<max(crack.points.count, 1) { length += (crack.points[index] - crack.points[index - 1]).length }
+            let end = crack.start + max(length * 0.85, 8)
+            reach = max(reach, end)
+            cracks.append(.init(points: crack.points, revealStart: crack.start, revealEnd: end, straggle: 1))
         }
 
         return FracturePattern(bounds: bounds, origins: origins, shards: shards, cracks: cracks, reach: reach)

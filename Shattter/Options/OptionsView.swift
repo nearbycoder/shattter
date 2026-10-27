@@ -12,6 +12,8 @@ struct OptionsView: View {
     @AppStorage(GagSettings.Key.sound) private var sound = true
     @AppStorage(GagSettings.Key.haptics) private var haptics = true
     @AppStorage(GagSettings.Key.count) private var count = 0
+    @AppStorage(GagSettings.Key.crackPattern) private var crackPattern: CrackPattern = .random
+    @AppStorage(GagSettings.Key.crackgate) private var crackgate = false
 
     let previews: [PrankScreen: UIImage]
     let previewAspect: CGFloat
@@ -34,6 +36,30 @@ struct OptionsView: View {
                 } footer: {
                     Text("Fake screens look like a real phone. Hand it over and let them tap.")
                 }
+
+                Section {
+                    Toggle(isOn: $crackgate) {
+                        Label("Crackgate Mode", systemImage: "rectangle.portrait.split.2x1")
+                    }
+                } header: {
+                    Text("Crackgate 😬")
+                } footer: {
+                    Text("Recreates the iPhone Duo reports: a crunch as it unfolds, a crack straight down the crease, and a block of pixels stuck glowing white. Hand someone the folded phone and let them open it.")
+                }
+
+                Section {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(CrackPattern.allCases) { option in
+                            tile(title: option.title, symbol: option.symbol, selected: crackPattern == option) { crackPattern = option }
+                        }
+                    }
+                    .padding(.vertical, 6)
+                } header: {
+                    Text("Crack Pattern")
+                } footer: {
+                    Text("Surprise Me picks a different pattern for every hit.")
+                }
+                .disabled(crackgate)
 
                 Section {
                     LazyVGrid(columns: columns, spacing: 10) {
@@ -70,6 +96,7 @@ struct OptionsView: View {
                 } footer: {
                     Text("“Never” leaves a cracked screen: the classic prank.")
                 }
+                .disabled(crackgate)
 
                 Section("After it breaks") {
                     Picker("Repair animation", selection: $repair) {
@@ -130,15 +157,16 @@ struct OptionsView: View {
     }
 
     private func styleTile(_ option: ShatterStyle) -> some View {
-        let selected = style == option
-        return Button {
-            style = option
-        } label: {
+        tile(title: option.title, symbol: option.symbol, selected: style == option) { style = option }
+    }
+
+    private func tile(title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             VStack(spacing: 6) {
-                Image(systemName: option.symbol)
+                Image(systemName: symbol)
                     .font(.title3)
                     .frame(height: 26)
-                Text(option.title)
+                Text(title)
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

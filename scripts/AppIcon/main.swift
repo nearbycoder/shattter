@@ -1,5 +1,5 @@
 // Renders the app icon with the app's own fracture engine.
-// swiftc scripts/AppIcon/main.swift Shattter/Glass/FractureGeometry.swift -o build/appicon && build/appicon <output.png>
+// swiftc scripts/AppIcon/main.swift Shattter/Glass/FractureGeometry.swift Shattter/Glass/CrackPattern.swift -o build/appicon && build/appicon <output.png>
 import AppKit
 import CoreGraphics
 

@@ -67,3 +67,27 @@ final class MultiImpactTests: XCTestCase {
         }
     }
 }
+
+final class CrackPatternTests: XCTestCase {
+    func testEveryPatternCracksAndTilesThePane() {
+        let bounds = CGRect(x: 0, y: 0, width: 466, height: 678)
+        XCTAssertEqual(CrackPattern.concrete.count, 20)
+        for (index, style) in CrackPattern.concrete.enumerated() {
+            let pattern = FractureBuilder.pattern(origin: .point(CGPoint(x: 200, y: 260)), style: style, bounds: bounds, seed: UInt64(index + 1))
+            XCTAssertGreaterThan(pattern.cracks.count, 5, "\(style) has no cracks")
+            XCTAssertGreaterThan(pattern.shards.count, 10, "\(style) has too few shards")
+            let area = pattern.shards.reduce(0) { $0 + $1.area }
+            XCTAssertEqual(area, bounds.width * bounds.height, accuracy: bounds.width * bounds.height * 0.01, "\(style) leaves gaps")
+        }
+    }
+
+    func testGridVoronoiMatchesBruteForceArea() {
+        let bounds = CGRect(x: 0, y: 0, width: 300, height: 300)
+        var rng = SeededRandom(seed: 3)
+        let seeds = (0..<800).map { _ in CGPoint(x: rng.range(0, 300), y: rng.range(0, 300)) }
+        let cells = FractureBuilder.voronoiCells(seeds: seeds, bounds: bounds)
+        XCTAssertEqual(cells.count, seeds.count)
+        let area = cells.reduce(0) { $0 + abs(FractureBuilder.signedArea($1)) }
+        XCTAssertEqual(area, 90_000, accuracy: 1)
+    }
+}
