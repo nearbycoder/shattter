@@ -82,22 +82,53 @@ struct FracturePattern {
         /// Crack front distance at which this crack starts and finishes appearing.
         let revealStart: CGFloat
         let revealEnd: CGFloat
+        /// Multiplier on the crack front; long radial cracks run ahead of a local impact.
+        let straggle: CGFloat
     }
 
     let bounds: CGRect
-    let origin: FractureOrigin
+    let origins: [FractureOrigin]
     let shards: [Shard]
     let cracks: [Crack]
-    /// Crack front distance at which every crack is fully visible.
+    /// Crack front distance at which every crack is fully visible, before straggle.
     let reach: CGFloat
+
+    /// Crack front distance at which every crack is fully visible, including straggle.
+    var fullFront: CGFloat { reach / 0.55 }
+}
+
+extension Array where Element == FractureOrigin {
+    func distance(to p: CGPoint) -> CGFloat {
+        map { $0.distance(to: p) }.min() ?? 0
+    }
+
+    func outward(at p: CGPoint) -> CGPoint {
+        self.min { $0.distance(to: p) < $1.distance(to: p) }?.outward(at: p) ?? CGPoint(x: 0, y: -1)
+    }
 }
 
 enum FractureBuilder {
     static func pattern(origin: FractureOrigin, bounds: CGRect, seed: UInt64) -> FracturePattern {
+        pattern(origins: [origin], bounds: bounds, seed: seed)
+    }
+
+    /// One fracture combining several impacts; each origin keeps the glass nearest to it.
+    static func pattern(origins: [FractureOrigin], bounds: CGRect, seed: UInt64) -> FracturePattern {
         var rng = SeededRandom(seed: seed)
-        let seeds = seedPoints(origin: origin, bounds: bounds, rng: &rng)
+        var seeds: [CGPoint] = []
+        for (index, origin) in origins.enumerated() {
+            let own = seedPoints(origin: origin, bounds: bounds, rng: &rng)
+            guard origins.count > 1 else {
+                seeds = own
+                break
+            }
+            seeds += own.filter { seed in
+                let mine = origin.distance(to: seed)
+                return origins.indices.allSatisfy { $0 == index || mine <= origins[$0].distance(to: seed) }
+            }
+        }
         let cells = voronoiCells(seeds: seeds, bounds: bounds)
-        return assemble(cells: cells, origin: origin, bounds: bounds, seed: seed, rng: &rng)
+        return assemble(cells: cells, origins: origins, bounds: bounds, seed: seed, rng: &rng)
     }
 
     // MARK: Seeds
@@ -239,7 +270,7 @@ enum FractureBuilder {
 
     private static func assemble(
         cells: [[CGPoint]],
-        origin: FractureOrigin,
+        origins: [FractureOrigin],
         bounds: CGRect,
         seed: UInt64,
         rng: inout SeededRandom
@@ -327,16 +358,36 @@ enum FractureBuilder {
                 centroid: centroid,
                 frame: boundingBox(outline),
                 area: abs(area),
-                distance: origin.distance(to: centroid)
+                distance: origins.distance(to: centroid)
             ))
+        }
+
+        // Reach varies smoothly with direction, so a local impact has a jagged edge
+        // while each radial crack stays connected along its length.
+        let lobePhases = (0..<4).map { _ in rng.range(0, .pi * 2) }
+        func lobe(_ p: CGPoint) -> CGFloat {
+            let nearest = origins.min { $0.distance(to: p) < $1.distance(to: p) } ?? .point(.zero)
+            let angle: CGFloat
+            switch nearest {
+            case .point(let o):
+                angle = atan2(p.y - o.y, p.x - o.x)
+            case .line(let a, let b):
+                let ab = b - a
+                let t = (p - a).dot(ab) / max(ab.dot(ab), 0.001)
+                let side: CGFloat = (p - a).dot(ab.perpendicular) > 0 ? 0 : .pi
+                angle = t * .pi * 4 + side
+            }
+            let wave = sin(angle * 3 + lobePhases[0]) * 0.4 + sin(angle * 5 + lobePhases[1]) * 0.3
+                + sin(angle * 9 + lobePhases[2]) * 0.2 + sin(angle * 2 + lobePhases[3]) * 0.1
+            return (wave + 1) / 2
         }
 
         var cracks: [FracturePattern.Crack] = []
         var reach: CGFloat = 1
         for key in edgeKeys.sorted(by: { ($0.a, $0.b) < ($1.a, $1.b) }) {
             var line = polyline(key)
-            var near = origin.distance(to: line[0])
-            var far = origin.distance(to: line[line.count - 1])
+            var near = origins.distance(to: line[0])
+            var far = origins.distance(to: line[line.count - 1])
             if near > far {
                 line.reverse()
                 swap(&near, &far)
@@ -345,15 +396,17 @@ enum FractureBuilder {
             let length = (last - first).length
             let mid = (first + last) * 0.5
             // Radial cracks race outward first; cross cracks lag behind and fill in the web.
-            let radial = length > 0.001 ? abs((last - first).normalized.dot(origin.outward(at: mid))) : 1
+            let radial = length > 0.001 ? abs((last - first).normalized.dot(origins.outward(at: mid))) : 1
             let lag = (1 - radial) * rng.range(0.08, 0.55)
             let start = near * (1 + lag) + lag * 30
             let end = start + max(far - near, length * 0.55)
             reach = max(reach, end)
-            cracks.append(.init(points: line, revealStart: start, revealEnd: end))
+            let shape = lobe(last)
+            let straggle = radial > 0.75 ? 0.6 + 1.3 * pow(shape, 1.5) : min(0.6 + 0.5 * shape, 1)
+            cracks.append(.init(points: line, revealStart: start, revealEnd: end, straggle: straggle))
         }
 
-        return FracturePattern(bounds: bounds, origin: origin, shards: shards, cracks: cracks, reach: reach)
+        return FracturePattern(bounds: bounds, origins: origins, shards: shards, cracks: cracks, reach: reach)
     }
 
     // MARK: Polygon helpers

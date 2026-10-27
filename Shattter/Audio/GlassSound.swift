@@ -10,7 +10,7 @@ final class GlassSound {
     static let shared = GlassSound()
 
     enum Effect: CaseIterable {
-        case shatter, crack, crunch, chime
+        case shatter, crack, crunch, chime, rewind
     }
 
     private var players: [Effect: [[AVAudioPlayer]]] = [:]
@@ -29,12 +29,13 @@ final class GlassSound {
         DispatchQueue.global(qos: .userInitiated).async {
             var rendered: [Effect: [[AVAudioPlayer]]] = [:]
             for effect in Effect.allCases {
-                let variants = effect == .crack ? 8 : (effect == .chime ? 2 : 3)
+                let variants = effect == .crack ? 8 : (effect == .chime || effect == .rewind ? 2 : 3)
                 let copies = effect == .crack ? 3 : 2
                 rendered[effect] = (0..<variants).compactMap { variant in
                     guard let wav = GlassSynth.render(effect, seed: UInt64(variant + 1) &* 7919) else { return nil }
                     let pool = (0..<copies).compactMap { _ -> AVAudioPlayer? in
                         let player = try? AVAudioPlayer(data: wav, fileTypeHint: AVFileType.wav.rawValue)
+                        player?.enableRate = true
                         player?.prepareToPlay()
                         return player
                     }
@@ -59,8 +60,8 @@ final class GlassSound {
         }
     }
 
-    func play(_ effect: Effect, volume: Float = 1) {
-        guard let variants = players[effect], !variants.isEmpty else { return }
+    func play(_ effect: Effect, volume: Float = 1, rate: Float = 1) {
+        guard GagSettings.sound, let variants = players[effect], !variants.isEmpty else { return }
         // Avoid repeating the same variant twice in a row.
         var index = Int.random(in: 0..<variants.count)
         if variants.count > 1, index == lastVariant[effect] { index = (index + 1) % variants.count }
@@ -70,6 +71,7 @@ final class GlassSound {
         player.stop()
         player.currentTime = 0
         player.volume = volume
+        player.rate = rate
         player.play()
     }
 }
@@ -86,6 +88,9 @@ enum GlassSynth {
         case .crack: voice.crack()
         case .crunch: voice.crunch()
         case .chime: voice.chime()
+        case .rewind:
+            voice.shatter()
+            voice.reverse()
         }
         voice.addRoom(mix: effect == .chime ? 0.22 : 0.14)
         voice.normalize(peak: effect == .crack ? 0.7 : 0.92)
@@ -98,6 +103,7 @@ enum GlassSynth {
         case .crack: 0.4
         case .crunch: 0.7
         case .chime: 1.6
+        case .rewind: 1.3
         }
     }
 
@@ -280,6 +286,18 @@ enum GlassSynth {
             }
         }
 
+        /// Plays the sound backwards with a short fade-in: shards sucked back into place.
+        mutating func reverse() {
+            left.reverse()
+            right.reverse()
+            let fade = min(Int(sampleRate * 0.25), left.count)
+            for i in 0..<fade {
+                let gain = Float(i) / Float(fade)
+                left[i] *= gain * gain
+                right[i] *= gain * gain
+            }
+        }
+
         /// A small room: parallel feedback combs with slightly different lengths per side.
         mutating func addRoom(mix: Float) {
             let delays: [Float] = [0.0297, 0.0371, 0.0411, 0.0437]
@@ -390,6 +408,7 @@ final class Haptics {
     }
 
     private func play(_ events: [CHHapticEvent], fallbackIntensity: CGFloat) {
+        guard GagSettings.haptics else { return }
         guard let engine else {
             fallback.impactOccurred(intensity: fallbackIntensity)
             return

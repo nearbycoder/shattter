@@ -52,3 +52,18 @@ final class FractureGeometryTests: XCTestCase {
         }
     }
 }
+
+final class MultiImpactTests: XCTestCase {
+    func testSeveralImpactsTileThePane() {
+        let bounds = CGRect(x: 0, y: 0, width: 466, height: 678)
+        let origins: [FractureOrigin] = [.point(CGPoint(x: 100, y: 120)), .point(CGPoint(x: 360, y: 500)), .line(CGPoint(x: 0, y: 339), CGPoint(x: 466, y: 339))]
+        let pattern = FractureBuilder.pattern(origins: origins, bounds: bounds, seed: 5)
+        let area = pattern.shards.reduce(0) { $0 + $1.area }
+        XCTAssertEqual(area, bounds.width * bounds.height, accuracy: bounds.width * bounds.height * 0.01)
+        XCTAssertEqual(pattern.origins.count, 3)
+        // Every crack is fully revealed at the full front, straggle included.
+        for crack in pattern.cracks {
+            XCTAssertGreaterThanOrEqual(pattern.fullFront * crack.straggle, crack.revealEnd)
+        }
+    }
+}

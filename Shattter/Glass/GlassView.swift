@@ -1,101 +1,147 @@
 import CoreMotion
 import UIKit
 
-/// The glass pane: cracks under hinge stress or a tap, then bursts into falling shards.
+/// The glass pane: cracks pile up under taps or hinge stress, then the pane bursts apart.
 final class GlassView: UIView {
-    private enum Phase {
-        case intact, cracking, shattering, reforming
+    enum Phase {
+        /// Untouched.
+        case intact
+        /// Cracked, still taking hits.
+        case cracked
+        /// The last hit: cracks race across the pane before it gives way.
+        case finishing
+        /// Shards in the air, or the pane is gone.
+        case shattering
+        /// A fresh pane is arriving.
+        case reforming
     }
 
-    private enum CrackDriver {
-        /// A tap: cracks race across the pane on their own, then it falls apart.
-        case impact(CGPoint, started: CFTimeInterval?)
-        /// The hinge or a two-finger bend: cracks follow accumulated stress.
-        case flex
+    /// One crack web: a local impact, the final race across the pane, or the hinge crease.
+    struct CrackSet {
+        let id: Int
+        let origin: FractureOrigin
+        var pattern: FracturePattern?
+        /// Translation applied to the pattern; pooled webs are built around the origin.
+        var offset: CGPoint
+        var front: CGFloat = 0
+        var target: CGFloat
+        var isFull = false
     }
 
-    private struct FlyingShard {
+    struct FlyingShard {
         let layer: CALayer
+        let home: CGPoint
         let reach: CGFloat
+        var startDistance: CGFloat = 1
         var offset = CGPoint.zero
         var velocity: CGPoint
         var z: CGFloat = 0
         var vz: CGFloat
         var rotation = SIMD3<Double>(0, 0, 0)
-        let spin: SIMD3<Double>
-        let delay: CFTimeInterval
+        var spin: SIMD3<Double>
+        var scale: CGFloat = 1
+        var delay: CFTimeInterval
+        /// Hang & Drop: when the piece lets go.
+        var release: CFTimeInterval = 0
+        var separation = CGPoint.zero
+        var wobble: Double = 0
+        var released = false
         var done = false
     }
 
     // Tuning
-    private let stressAngle: CGFloat = .pi * 40 / 180
-    private let crackleStep: CGFloat = .pi * 2.5 / 180
-    private let impactCrackDuration: CFTimeInterval = 0.38
-    private let gravity: CGFloat = 2600
-    private let perspective: CGFloat = 1000
+    let crackleStep: CGFloat = .pi * 2.5 / 180
+    let perspective: CGFloat = 1000
+    let finishDelay: CFTimeInterval = 0.42
 
     // Views and layers
-    private let stage = UIView()
-    private let backdrop = BackdropView()
-    private let glassLayer = CALayer()
-    private let paneLayer = CALayer()
-    private let sheenLayer = CAGradientLayer()
-    private let crackShadow = CAShapeLayer()
-    private let crackGlow = CAShapeLayer()
-    private let crackCore = CAShapeLayer()
-    private let prismLayer = CAGradientLayer()
-    private let prismMask = CAShapeLayer()
-    private let impactGlow = CAGradientLayer()
-    private let shardLayer = CALayer()
-    private let sparkLayer = CAEmitterLayer()
-    private let flashLayer = CALayer()
+    let stage = UIView()
+    let backdrop = BackdropView()
+    let glassLayer = CALayer()
+    let paneLayer = CALayer()
+    let sheenLayer = CAGradientLayer()
+    let crackShadow = CAShapeLayer()
+    let crackGlow = CAShapeLayer()
+    let crackCore = CAShapeLayer()
+    let prismLayer = CAGradientLayer()
+    let prismMask = CAShapeLayer()
+    let impactGlow = CAGradientLayer()
+    let shardLayer = CALayer()
+    let sparkLayer = CAEmitterLayer()
+    let flashLayer = CALayer()
+    let intro = UIStackView()
+    let introTitle = UILabel()
+    let introHint = UILabel()
+    let introTip = UILabel()
 
-    // State
-    private var phase = Phase.intact
-    private var driver: CrackDriver?
-    private var palette = GlassPalette.all[0]
-    private var paletteIndex = Int.random(in: 0..<GlassPalette.all.count)
-    private var paneImage: UIImage?
-    private var paneHint = ""
-    private var renderedSize = CGSize.zero
-    private var generation = 0
-    private var pattern: FracturePattern?
-    private var sprites: [ShardSprite]?
-    private var pendingShatter: FractureOrigin?
-    private var shatterQueued = false
-    private var crackFront: CGFloat = 0
-    private var crackTarget: CGFloat = 0
-    private var drawnFront: CGFloat = -1
-    private var stress: CGFloat = 0
-    private var crackleTravel: CGFloat = 0
-    private var lastCrackle: CFTimeInterval = 0
-    private var shards: [FlyingShard] = []
-    private var shatterTime: CFTimeInterval = 0
-    private var displayLink: CADisplayLink?
-    private var lastFrame: CFTimeInterval = 0
-    private var reformWork: DispatchWorkItem?
-    private var hingeAngle: CGFloat?
-    private var hingeTime: CFTimeInterval = 0
-    private var hingePose = HingePose.unavailable
-    private var lastPan = CGPoint.zero
-    private let motion = CMMotionManager()
+    // Pane
+    var screen = GagSettings.screen
+    var palette = GlassPalette.all[0]
+    var paletteIndex = Int.random(in: 0..<GlassPalette.all.count)
+    var paneImage: UIImage?
+    var renderedSize = CGSize.zero
+    var renderedMinute = -1
+    var clockTimer: Timer?
 
-    private var count: Int {
-        get { UserDefaults.standard.integer(forKey: "panesShattered") }
-        set { UserDefaults.standard.set(newValue, forKey: "panesShattered") }
-    }
+    // Cracking
+    var phase = Phase.intact
+    var crackSets: [CrackSet] = []
+    var nextCrackID = 0
+    var hingeSetID: Int?
+    var hits = 0
+    var stress: CGFloat = 0
+    var crackleTravel: CGFloat = 0
+    var lastCrackle: CFTimeInterval = 0
+    var drawnSignature: CGFloat = -1
+    var webPool: [FracturePattern] = []
+    var webPoolExtent: CGFloat = 0
+    var webPoolPending = 0
+    var finishTime: CFTimeInterval = 0
+    var finishImpulse: FractureOrigin?
+    var explosionRequested = false
+
+    // Final shards, pre-cut in the background as cracks accumulate
+    var finalToken = 0
+    var finalSprites: [ShardSprite]?
+    var finalSpritesToken = -1
+    var pendingImpulse: FractureOrigin?
+    let buildQueue = DispatchQueue(label: "app.shattter.fracture", qos: .userInitiated)
+    let latestToken = TokenBox()
+
+    // Shattering
+    var shards: [FlyingShard] = []
+    var style = ShatterStyle.explode
+    var impulse = FractureOrigin.point(.zero)
+    var shatterTime: CFTimeInterval = 0
+    var shardClock: CFTimeInterval = 0
+    var popped = false
+    var repairWork: DispatchWorkItem?
+    var displayLink: CADisplayLink?
+    var lastFrame: CFTimeInterval = 0
+
+    // Hinge and gestures
+    var hingeAngle: CGFloat?
+    var hingeTime: CFTimeInterval = 0
+    var hingePose = HingePose.unavailable
+    var lastPan = CGPoint.zero
+    var introPending = true
+    let motion = CMMotionManager()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
         isMultipleTouchEnabled = true
         setUpLayers()
+        setUpIntro()
         setUpGestures()
         startMotion()
         isAccessibilityElement = true
         accessibilityLabel = "Glass pane"
-        accessibilityHint = "Double tap to shatter."
+        accessibilityHint = "Double tap to crack it. Hold with two fingers for options."
         accessibilityTraits = [.allowsDirectInteraction]
+        clockTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.refreshClockIfNeeded()
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -105,6 +151,7 @@ final class GlassView: UIView {
     deinit {
         motion.stopDeviceMotionUpdates()
         displayLink?.invalidate()
+        clockTimer?.invalidate()
     }
 
     // MARK: Setup
@@ -115,7 +162,6 @@ final class GlassView: UIView {
         addSubview(stage)
         stage.addSubview(backdrop)
 
-        shardLayer.masksToBounds = false
         var transform = CATransform3DIdentity
         transform.m34 = -1 / perspective
         shardLayer.sublayerTransform = transform
@@ -176,6 +222,40 @@ final class GlassView: UIView {
         stage.layer.addSublayer(flashLayer)
     }
 
+    private func setUpIntro() {
+        introTitle.text = "Shattter"
+        introTitle.font = UIFont.systemFont(ofSize: 64, weight: .black).rounded
+        introTitle.textColor = UIColor.white.withAlphaComponent(0.92)
+        introTitle.adjustsFontSizeToFitWidth = true
+        introTitle.minimumScaleFactor = 0.5
+        introHint.font = UIFont.systemFont(ofSize: 17, weight: .semibold).rounded
+        introHint.textColor = UIColor.white.withAlphaComponent(0.8)
+        introTip.text = "Hold with two fingers for options"
+        introTip.font = UIFont.systemFont(ofSize: 13, weight: .medium).rounded
+        introTip.textColor = UIColor.white.withAlphaComponent(0.55)
+        for label in [introTitle, introHint, introTip] {
+            label.textAlignment = .center
+            label.layer.shadowColor = UIColor.black.cgColor
+            label.layer.shadowOpacity = 0.35
+            label.layer.shadowRadius = 6
+            label.layer.shadowOffset = CGSize(width: 0, height: 2)
+            intro.addArrangedSubview(label)
+        }
+        intro.axis = .vertical
+        intro.spacing = 8
+        intro.setCustomSpacing(26, after: introHint)
+        intro.alpha = 0
+        intro.isUserInteractionEnabled = false
+        intro.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(intro)
+        NSLayoutConstraint.activate([
+            intro.centerXAnchor.constraint(equalTo: centerXAnchor),
+            intro.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -20),
+            intro.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
+            intro.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+        ])
+    }
+
     private func setUpGestures() {
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         addGestureRecognizer(tap)
@@ -210,7 +290,7 @@ final class GlassView: UIView {
         CATransaction.setDisableActions(true)
         stage.frame = bounds
         backdrop.frame = bounds
-        for layer in [glassLayer, paneLayer, shardLayer, flashLayer, crackShadow, crackGlow, crackCore, prismMask] as [CALayer] {
+        for layer in [glassLayer, paneLayer, shardLayer, flashLayer, crackShadow, crackGlow, crackCore] as [CALayer] {
             layer.frame = bounds
         }
         let diagonal = hypot(bounds.width, bounds.height)
@@ -222,152 +302,137 @@ final class GlassView: UIView {
         }
         CATransaction.commit()
         if bounds.width > 0, bounds.height > 0, bounds.size != renderedSize {
-            resetPane()
+            resetPane(showIntro: introPending)
         }
     }
 
-    private var screenScale: CGFloat {
+    var screenScale: CGFloat {
         window?.screen.scale ?? traitCollection.displayScale
     }
 
     /// The fold crease: perpendicular to the long side, through the middle.
-    private var hingeLine: FractureOrigin {
+    var hingeLine: FractureOrigin {
         if bounds.width >= bounds.height {
             return .line(CGPoint(x: bounds.midX, y: bounds.minY), CGPoint(x: bounds.midX, y: bounds.maxY))
         }
         return .line(CGPoint(x: bounds.minX, y: bounds.midY), CGPoint(x: bounds.maxX, y: bounds.midY))
     }
 
-    private var currentHint: String {
+    var hintText: String {
         switch hingePose {
-        case .partiallyOpen, .fullyOpen: "Bend the hinge"
+        case .partiallyOpen, .fullyOpen: "Bend the hinge or tap the glass"
         case .closed, .unavailable: "Tap the glass"
         }
     }
 
+    var shardEdge: UIColor {
+        screen == .glass ? palette.edge : UIColor(white: 0.92, alpha: 1)
+    }
+
     // MARK: Pane lifecycle
 
-    private func resetPane() {
-        generation += 1
-        reformWork?.cancel()
+    /// Called after the options sheet closes.
+    func applySettings() {
+        screen = GagSettings.screen
+        resetPane(showIntro: screen == .glass)
+    }
+
+    func resetPane(showIntro: Bool) {
+        repairWork?.cancel()
         clearShards()
+        clearCracks()
         phase = .intact
-        driver = nil
-        pattern = nil
-        sprites = nil
-        pendingShatter = nil
-        shatterQueued = false
-        stress = 0
-        crackFront = 0
-        crackTarget = 0
-        crackleTravel = 0
         renderedSize = bounds.size
         renderPane()
-        updateCracks(force: true)
         glassLayer.removeAllAnimations()
         glassLayer.opacity = 1
         glassLayer.transform = CATransform3DIdentity
         stopDisplayLink()
+        refillWebPool()
+        if showIntro, screen == .glass {
+            introPending = false
+            presentIntro()
+        } else {
+            hideIntro(animated: false)
+        }
     }
 
-    private func renderPane() {
+    func renderPane() {
+        guard bounds.width > 0 else { return }
         palette = GlassPalette.all[paletteIndex % GlassPalette.all.count]
-        paneHint = currentHint
-        let image = PaneArtwork.render(size: bounds.size, scale: screenScale, palette: palette, hint: paneHint, seed: UInt64.random(in: 1...UInt64.max))
+        let now = Date()
+        renderedMinute = Calendar.current.component(.minute, from: now)
+        let image = ScreenArt.render(screen, size: bounds.size, scale: screenScale, palette: palette, date: now)
         paneImage = image
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         paneLayer.contents = image.cgImage
+        sheenLayer.opacity = screen.sheenOpacity
         CATransaction.commit()
     }
 
-    private func reform() {
-        guard phase == .shattering else { return }
-        reformWork?.cancel()
-        generation += 1
-        phase = .reforming
-        paletteIndex += 1
-        pattern = nil
-        sprites = nil
-        driver = nil
-        pendingShatter = nil
-        shatterQueued = false
-        stress = 0
-        crackFront = 0
-        crackTarget = 0
-        crackleTravel = 0
+    /// Keeps fake clocks honest while the screen is untouched.
+    private func refreshClockIfNeeded() {
+        guard screen.showsClock, phase == .intact, Calendar.current.component(.minute, from: Date()) != renderedMinute else { return }
         renderPane()
-        updateCracks(force: true)
-
-        GlassSound.shared.play(.chime, volume: 0.7)
-        Haptics.shared.chime()
-
-        // Fresh glass condenses into place.
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self] in
-            guard let self, self.phase == .reforming else { return }
-            self.clearShards()
-            self.phase = .intact
-            self.stopDisplayLink()
-        }
-        glassLayer.opacity = 1
-        glassLayer.transform = CATransform3DIdentity
-        let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = 0
-        fade.toValue = 1
-        fade.duration = 0.45
-        let grow = CASpringAnimation(keyPath: "transform.scale")
-        grow.fromValue = 1.12
-        grow.toValue = 1
-        grow.damping = 14
-        grow.stiffness = 180
-        grow.duration = grow.settlingDuration
-        glassLayer.add(fade, forKey: "fade")
-        glassLayer.add(grow, forKey: "grow")
-        let shardFade = CABasicAnimation(keyPath: "opacity")
-        shardFade.fromValue = 1
-        shardFade.toValue = 0
-        shardFade.duration = 0.3
-        shardLayer.add(shardFade, forKey: "fade")
-        shardLayer.opacity = 0
-        CATransaction.commit()
-        sweepShine()
     }
 
-    private func sweepShine() {
-        let shine = CAGradientLayer()
-        shine.colors = [UIColor.white.withAlphaComponent(0).cgColor, UIColor.white.withAlphaComponent(0.55).cgColor, UIColor.white.withAlphaComponent(0).cgColor]
-        shine.startPoint = CGPoint(x: 0, y: 0.3)
-        shine.endPoint = CGPoint(x: 1, y: 0.7)
-        let width = bounds.width * 0.6
-        shine.frame = CGRect(x: -width, y: -bounds.height * 0.1, width: width, height: bounds.height * 1.2)
-        glassLayer.addSublayer(shine)
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { shine.removeFromSuperlayer() }
-        let move = CABasicAnimation(keyPath: "position.x")
-        move.fromValue = -width / 2
-        move.toValue = bounds.width + width / 2
-        move.duration = 0.75
-        move.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        move.isRemovedOnCompletion = false
-        move.fillMode = .forwards
-        shine.add(move, forKey: "sweep")
-        CATransaction.commit()
+    func clearCracks() {
+        crackSets.removeAll()
+        hingeSetID = nil
+        hits = 0
+        stress = 0
+        crackleTravel = 0
+        finishImpulse = nil
+        explosionRequested = false
+        pendingImpulse = nil
+        finalSprites = nil
+        finalToken += 1
+        latestToken.set(finalToken)
+        updateCracks(force: true)
+    }
+
+    // MARK: Intro
+
+    private func presentIntro() {
+        introHint.text = hintText
+        intro.layer.removeAllAnimations()
+        intro.alpha = 0
+        intro.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
+        UIView.animate(withDuration: 0.6, delay: 0.15, options: [.allowUserInteraction, .curveEaseOut]) {
+            self.intro.alpha = 1
+            self.intro.transform = .identity
+        } completion: { finished in
+            guard finished else { return }
+            UIView.animate(withDuration: 0.9, delay: 2.6, options: [.allowUserInteraction, .beginFromCurrentState]) {
+                self.intro.alpha = 0
+            }
+        }
+    }
+
+    func hideIntro(animated: Bool = true) {
+        if animated {
+            guard intro.alpha > 0 else { return }
+            UIView.animate(withDuration: 0.25, delay: 0, options: [.beginFromCurrentState, .allowUserInteraction]) {
+                self.intro.alpha = 0
+            }
+        } else {
+            intro.layer.removeAllAnimations()
+            intro.alpha = 0
+        }
     }
 
     // MARK: Input
 
     @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
         let point = recognizer.location(in: self)
+        hideIntro()
         switch phase {
-        case .intact:
-            startImpact(at: point)
-        case .cracking:
-            // Glass already weakened by the hinge gives way at a touch.
-            if case .flex = driver { shatter(from: .point(point)) }
+        case .intact, .cracked:
+            registerHit(at: point)
         case .shattering:
-            if CACurrentMediaTime() - shatterTime > 0.6 { reform() }
-        case .reforming:
+            if CACurrentMediaTime() - shatterTime > 0.6 { repair() }
+        case .finishing, .reforming:
             break
         }
     }
@@ -388,29 +453,26 @@ final class GlassView: UIView {
     }
 
     override func accessibilityActivate() -> Bool {
-        smashCenter()
+        if phase == .intact || phase == .cracked { registerHit(at: bounds.center) }
         return true
     }
 
+    /// A shake smashes the pane outright.
     func smashCenter() {
-        switch phase {
-        case .intact: startImpact(at: bounds.center)
-        case .cracking: shatter(from: .point(bounds.center))
-        case .shattering, .reforming: break
-        }
+        guard phase == .intact || phase == .cracked else { return }
+        hideIntro()
+        finish(impulse: .point(bounds.center))
     }
 
     func hingeChanged(angle: CGFloat?, pose: HingePose) {
         let now = CACurrentMediaTime()
         let previousAngle = hingeAngle
         let previousTime = hingeTime
-        let poseChanged = pose != hingePose
         hingeAngle = angle
         hingeTime = now
-        hingePose = pose
-
-        if poseChanged, phase == .intact, currentHint != paneHint, bounds.width > 0 {
-            renderPane()
+        if pose != hingePose {
+            hingePose = pose
+            introHint.text = hintText
         }
         guard let angle, let previousAngle, pose != .closed, pose != .unavailable else { return }
         let delta = abs(angle - previousAngle)
@@ -421,40 +483,78 @@ final class GlassView: UIView {
 
     // MARK: Cracking
 
-    private func startImpact(at point: CGPoint) {
-        guard phase == .intact, paneImage != nil else { return }
-        phase = .cracking
-        driver = .impact(point, started: nil)
-        GlassSound.shared.play(.crunch)
+    /// A tap: a new crack web, a bigger one if it lands on an old impact, or the final blow.
+    func registerHit(at point: CGPoint) {
+        guard phase == .intact || phase == .cracked, paneImage != nil else { return }
+        hits += 1
+        let threshold = GagSettings.hitsToShatter
+        if threshold > 0, hits >= threshold {
+            finish(impulse: .point(point))
+            return
+        }
+        phase = .cracked
+        if let index = nearbyCrack(to: point) {
+            crackSets[index].target = crackSets[index].target * 1.5 + 50
+        } else {
+            addPointCrack(at: point, radius: localCrackRadius())
+        }
+        GlassSound.shared.play(.crunch, volume: 0.85)
         Haptics.shared.crunch()
         showImpactGlow(at: point)
-        shake(intensity: 5)
-        buildFracture(origin: .point(point)) { [weak self] in
-            guard let self, case .impact(let p, nil) = self.driver else { return }
-            self.driver = .impact(p, started: CACurrentMediaTime())
-        }
+        shake(intensity: 4)
+        prepareFinalShards()
+        startDisplayLink()
     }
 
-    /// Hinge movement (radians) or an equivalent bend gesture.
-    private func flex(by delta: CGFloat, rate: CGFloat) {
-        switch phase {
-        case .shattering, .reforming:
-            return
-        case .intact:
-            guard paneImage != nil else { return }
-            phase = .cracking
-            driver = .flex
-            stress = 0
+    /// The pane gives way: cracks race across it, then it shatters.
+    func finish(impulse: FractureOrigin) {
+        guard phase == .intact || phase == .cracked else { return }
+        phase = .finishing
+        finishImpulse = impulse
+        finishTime = CACurrentMediaTime()
+        explosionRequested = false
+        switch impulse {
+        case .point(let point):
+            if let index = nearbyCrack(to: point) {
+                crackSets[index].isFull = true
+            } else {
+                addPointCrack(at: point, radius: 60, full: true)
+            }
+            GlassSound.shared.play(.crunch)
+            Haptics.shared.crunch()
+            showImpactGlow(at: point)
+            shake(intensity: 6)
+        case .line:
+            if let index = crackSets.firstIndex(where: { $0.id == hingeSetID }) {
+                crackSets[index].isFull = true
+            }
+            GlassSound.shared.play(.crunch)
+            Haptics.shared.crunch()
+        }
+        prepareFinalShards()
+        startDisplayLink()
+    }
+
+    /// Hinge movement (radians) or an equivalent two-finger bend.
+    func flex(by delta: CGFloat, rate: CGFloat) {
+        guard phase == .intact || phase == .cracked, paneImage != nil else { return }
+        hideIntro()
+        if hingeSetID == nil {
+            phase = .cracked
+            let id = nextCrackID
+            nextCrackID += 1
+            hingeSetID = id
+            let origin = hingeLine
+            crackSets.append(CrackSet(id: id, origin: origin, offset: .zero, target: 0))
+            buildCrackPattern(for: id, origin: origin)
             GlassSound.shared.play(.crack)
             Haptics.shared.crack(intensity: 0.8)
-            buildFracture(origin: hingeLine) {}
-            startDisplayLink()
-        case .cracking:
-            guard case .flex = driver else { return }
+            prepareFinalShards()
         }
 
         // Fast snaps stress the glass more than slow creaks.
         let boost = min(max(rate / 1.4, 1), 2.2)
+        let stressAngle = CGFloat(GagSettings.hingeDegrees) * .pi / 180
         stress += delta / stressAngle * boost
         crackleTravel += delta * boost
         let now = CACurrentMediaTime()
@@ -465,54 +565,156 @@ final class GlassView: UIView {
             Haptics.shared.crack(intensity: Float(0.45 + min(stress, 1) * 0.5))
             shake(intensity: 1 + min(stress, 1) * 3)
         }
-        updateFlexTarget()
         if stress >= 1 {
-            shatter(from: hingeLine)
+            if GagSettings.hitsToShatter == 0 {
+                stress = 1
+            } else {
+                finish(impulse: hingeLine)
+                return
+            }
+        }
+        startDisplayLink()
+    }
+
+    private func nearbyCrack(to point: CGPoint) -> Int? {
+        crackSets.firstIndex { set in
+            if case .point(let origin) = set.origin { return (origin - point).length < 55 }
+            return false
         }
     }
 
-    private func updateFlexTarget() {
-        guard let pattern else { return }
-        crackTarget = pattern.reach * (0.07 + 0.93 * pow(min(stress, 1), 0.85))
+    private func localCrackRadius() -> CGFloat {
+        min(bounds.width, bounds.height) * CGFloat.random(in: 0.24...0.4) + 30
     }
 
-    private func buildFracture(origin: FractureOrigin, ready: @escaping () -> Void) {
-        guard let pane = paneImage else { return }
-        generation += 1
-        let token = generation
-        let bounds = bounds
-        let scale = min(screenScale, 2)
-        let edge = palette.edge
-        let seed = UInt64.random(in: 1...UInt64.max)
-        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
-            let pattern = FractureBuilder.pattern(origin: origin, bounds: bounds, seed: seed)
-            DispatchQueue.main.async {
-                guard let self, token == self.generation else { return }
-                self.pattern = pattern
-                self.updateFlexTarget()
-                ready()
-                self.startDisplayLink()
-            }
-            let sprites = ShardRenderer.render(pattern: pattern, pane: pane, scale: scale, edge: edge)
-            DispatchQueue.main.async {
-                guard let self, token == self.generation else { return }
-                self.sprites = sprites
-                if let pending = self.pendingShatter {
-                    self.pendingShatter = nil
-                    self.shatter(from: pending)
+    private func addPointCrack(at point: CGPoint, radius: CGFloat, full: Bool = false) {
+        let id = nextCrackID
+        nextCrackID += 1
+        var set = CrackSet(id: id, origin: .point(point), offset: point, target: radius, isFull: full)
+        if let web = webPool.popLast() {
+            set.pattern = web
+            set.front = min(radius * 0.3, 40)
+        } else {
+            set.offset = .zero
+            buildCrackPattern(for: id, origin: .point(point))
+        }
+        crackSets.append(set)
+        refillWebPool()
+    }
+
+    /// Crack webs built around (0, 0) ahead of time, so a tap cracks instantly.
+    func refillWebPool() {
+        let extent = max(bounds.width, bounds.height)
+        guard extent > 0 else { return }
+        if abs(extent - webPoolExtent) > 1 {
+            webPool.removeAll()
+            webPoolExtent = extent
+        }
+        let needed = 3 - webPool.count - webPoolPending
+        guard needed > 0 else { return }
+        webPoolPending += needed
+        let square = CGRect(x: -extent, y: -extent, width: extent * 2, height: extent * 2)
+        for _ in 0..<needed {
+            let seed = UInt64.random(in: 1...UInt64.max)
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                let web = FractureBuilder.pattern(origin: .point(.zero), bounds: square, seed: seed)
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.webPoolPending -= 1
+                    if abs(self.webPoolExtent - extent) < 1 { self.webPool.append(web) }
                 }
             }
         }
     }
 
-    private func updateCracks(force: Bool = false) {
-        guard force || abs(crackFront - drawnFront) > 0.4 else { return }
-        drawnFront = crackFront
+    private func buildCrackPattern(for id: Int, origin: FractureOrigin) {
+        let bounds = bounds
+        let seed = UInt64.random(in: 1...UInt64.max)
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+            let pattern = FractureBuilder.pattern(origin: origin, bounds: bounds, seed: seed)
+            DispatchQueue.main.async {
+                guard let self, let index = self.crackSets.firstIndex(where: { $0.id == id }) else { return }
+                self.crackSets[index].pattern = pattern
+                self.startDisplayLink()
+            }
+        }
+    }
+
+    /// Cuts shards for every impact so far, so the pane can burst the moment it gives way.
+    func prepareFinalShards() {
+        guard let pane = paneImage, bounds.width > 0 else { return }
+        finalToken += 1
+        let token = finalToken
+        latestToken.set(token)
+        let origins = crackSets.map(\.origin)
+        guard !origins.isEmpty else { return }
+        let bounds = bounds
+        let scale = min(screenScale, 2)
+        let edge = shardEdge
+        let seed = UInt64.random(in: 1...UInt64.max)
+        let latest = latestToken
+        buildQueue.async { [weak self] in
+            guard latest.current == token else { return }
+            let pattern = FractureBuilder.pattern(origins: origins, bounds: bounds, seed: seed)
+            guard latest.current == token else { return }
+            let sprites = ShardRenderer.render(pattern: pattern, pane: pane, scale: scale, edge: edge)
+            DispatchQueue.main.async {
+                guard let self, token == self.finalToken else { return }
+                self.finalSprites = sprites
+                self.finalSpritesToken = token
+                if let impulse = self.pendingImpulse {
+                    self.pendingImpulse = nil
+                    self.shatter(from: impulse)
+                }
+            }
+        }
+    }
+
+    func stepCracks(now: CFTimeInterval, dt: CGFloat) {
+        var moving = false
+        for index in crackSets.indices {
+            guard let pattern = crackSets[index].pattern else {
+                moving = true
+                continue
+            }
+            var target = crackSets[index].target
+            if crackSets[index].isFull {
+                target = pattern.fullFront
+            } else if crackSets[index].id == hingeSetID {
+                target = pattern.fullFront * (0.06 + 0.94 * pow(min(stress, 1), 0.85))
+            }
+            crackSets[index].target = target
+            let rate: CGFloat = crackSets[index].isFull ? 7 : 9
+            let previous = crackSets[index].front
+            crackSets[index].front += (target - previous) * min(1, dt * rate)
+            if abs(crackSets[index].front - previous) > 0.2 { moving = true }
+        }
+        updateCracks()
+
+        if phase == .finishing, !explosionRequested, now - finishTime >= finishDelay, let impulse = finishImpulse {
+            explosionRequested = true
+            if finalSprites != nil, finalSpritesToken == finalToken {
+                shatter(from: impulse)
+            } else {
+                pendingImpulse = impulse
+            }
+        }
+        if !moving, phase == .cracked { stopDisplayLink() }
+    }
+
+    func updateCracks(force: Bool = false) {
+        let signature = crackSets.reduce(0) { $0 + $1.front + ($1.pattern == nil ? 0 : 1) }
+        guard force || abs(signature - drawnSignature) > 0.3 else { return }
+        drawnSignature = signature
         let path = CGMutablePath()
-        if let pattern, crackFront > 0 {
-            for crack in pattern.cracks where crackFront > crack.revealStart {
-                let progress = min(1, (crackFront - crack.revealStart) / max(crack.revealEnd - crack.revealStart, 0.001))
-                appendPartial(crack.points, progress: progress, to: path)
+        for set in crackSets {
+            guard let pattern = set.pattern, set.front > 0 else { continue }
+            let shift = CGAffineTransform(translationX: set.offset.x, y: set.offset.y)
+            for crack in pattern.cracks {
+                let front = set.front * crack.straggle
+                guard front > crack.revealStart else { continue }
+                let progress = min(1, (front - crack.revealStart) / max(crack.revealEnd - crack.revealStart, 0.001))
+                appendPartial(crack.points, progress: progress, transform: shift, to: path)
             }
         }
         CATransaction.begin()
@@ -524,120 +726,34 @@ final class GlassView: UIView {
         CATransaction.commit()
     }
 
-    private func appendPartial(_ points: [CGPoint], progress: CGFloat, to path: CGMutablePath) {
+    private func appendPartial(_ points: [CGPoint], progress: CGFloat, transform: CGAffineTransform, to path: CGMutablePath) {
         guard points.count > 1 else { return }
         if progress >= 1 {
-            path.addLines(between: points)
+            path.addLines(between: points, transform: transform)
             return
         }
         var total: CGFloat = 0
         for index in 1..<points.count { total += (points[index] - points[index - 1]).length }
         var remaining = total * progress
-        path.move(to: points[0])
+        var visible = [points[0]]
         for index in 1..<points.count {
             let segment = (points[index] - points[index - 1]).length
             if remaining >= segment {
-                path.addLine(to: points[index])
+                visible.append(points[index])
                 remaining -= segment
             } else {
                 if segment > 0 {
-                    path.addLine(to: points[index - 1] + (points[index] - points[index - 1]) * (remaining / segment))
+                    visible.append(points[index - 1] + (points[index] - points[index - 1]) * (remaining / segment))
                 }
                 break
             }
         }
-    }
-
-    // MARK: Shattering
-
-    private func shatter(from impulse: FractureOrigin) {
-        guard phase == .cracking || phase == .intact else { return }
-        guard let sprites, pattern != nil else {
-            pendingShatter = impulse
-            if phase == .intact {
-                phase = .cracking
-                driver = .flex
-                buildFracture(origin: impulse) {}
-            }
-            return
-        }
-        phase = .shattering
-        pendingShatter = nil
-        count += 1
-        backdrop.prepare(count: count, palette: palette)
-
-        // Swap the intact pane for loose shards.
-        let maxDistance = max(sprites.map(\.distance).max() ?? 1, 1)
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        clearShards()
-        shardLayer.removeAllAnimations()
-        shardLayer.opacity = 1
-        let scale = min(screenScale, 2)
-        var flying: [FlyingShard] = []
-        flying.reserveCapacity(sprites.count)
-        for sprite in sprites {
-            let layer = CALayer()
-            layer.contents = sprite.image
-            layer.contentsScale = scale
-            layer.bounds = CGRect(origin: .zero, size: sprite.frame.size)
-            layer.anchorPoint = CGPoint(
-                x: (sprite.centroid.x - sprite.frame.minX) / sprite.frame.width,
-                y: (sprite.centroid.y - sprite.frame.minY) / sprite.frame.height
-            )
-            layer.position = sprite.centroid
-            layer.isDoubleSided = true
-            shardLayer.addSublayer(layer)
-
-            let impulseDistance = impulse.distance(to: sprite.centroid)
-            let reachNorm = min(impulseDistance / maxDistance, 1)
-            let closeness = 1 - reachNorm
-            let direction = impulse.outward(at: sprite.centroid)
-            let speed = 60 + 620 * closeness * closeness * CGFloat.random(in: 0.6...1.25)
-            let lift = CGFloat.random(in: 0...160) * closeness
-            let size = sqrt(max(sprite.area, 1))
-            let spinScale = Double(min(max(70 / size, 0.6), 2.6))
-            flying.append(FlyingShard(
-                layer: layer,
-                reach: hypot(sprite.frame.width, sprite.frame.height),
-                velocity: CGPoint(x: direction.x * speed + CGFloat.random(in: -40...40), y: direction.y * speed - lift),
-                vz: CGFloat.random(in: 120...520) * (0.35 + closeness * 0.65),
-                spin: SIMD3(
-                    Double.random(in: 2.5...9) * (Bool.random() ? 1 : -1) * spinScale,
-                    Double.random(in: 2.5...9) * (Bool.random() ? 1 : -1) * spinScale,
-                    Double.random(in: 0.5...4) * (Bool.random() ? 1 : -1) * spinScale
-                ),
-                delay: 0.015 + Double(reachNorm) * 0.3 + Double.random(in: 0...0.06)
-            ))
-        }
-        shards = flying
-        glassLayer.opacity = 0
-        crackFront = 0
-        drawnFront = -1
-        CATransaction.commit()
-
-        GlassSound.shared.play(.shatter)
-        Haptics.shared.shatter()
-        flash()
-        shake(intensity: 14)
-        burstSparks(from: impulse)
-
-        shatterTime = CACurrentMediaTime()
-        startDisplayLink()
-        let work = DispatchWorkItem { [weak self] in self?.reform() }
-        reformWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6, execute: work)
-    }
-
-    private func clearShards() {
-        for shard in shards { shard.layer.removeFromSuperlayer() }
-        shards.removeAll()
-        shardLayer.sublayers?.forEach { $0.removeFromSuperlayer() }
+        path.addLines(between: visible, transform: transform)
     }
 
     // MARK: Frame loop
 
-    private func startDisplayLink() {
+    func startDisplayLink() {
         guard displayLink == nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(step(_:)))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
@@ -646,7 +762,7 @@ final class GlassView: UIView {
         lastFrame = CACurrentMediaTime()
     }
 
-    private func stopDisplayLink() {
+    func stopDisplayLink() {
         displayLink?.invalidate()
         displayLink = nil
     }
@@ -655,92 +771,28 @@ final class GlassView: UIView {
         let now = CACurrentMediaTime()
         let dt = CGFloat(min(max(now - lastFrame, 1.0 / 240), 1.0 / 30))
         lastFrame = now
-
         switch phase {
-        case .cracking:
+        case .cracked, .finishing:
             stepCracks(now: now, dt: dt)
-        case .shattering, .reforming:
+        case .shattering:
             stepShards(now: now, dt: dt)
-        case .intact:
-            stopDisplayLink()
-        }
-    }
-
-    private func stepCracks(now: CFTimeInterval, dt: CGFloat) {
-        guard let pattern else { return }
-        switch driver {
-        case .impact(let point, let started?):
-            let t = min((now - started) / impactCrackDuration, 1)
-            let eased = 1 - pow(1 - t, 3)
-            crackFront = pattern.reach * CGFloat(eased)
-            if t >= 1, !shatterQueued {
-                shatterQueued = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
-                    guard let self, self.phase == .cracking, case .impact = self.driver else { return }
-                    self.shatter(from: .point(point))
-                }
-            }
-        case .flex:
-            crackFront += (crackTarget - crackFront) * min(1, dt * 10)
-        default:
-            break
-        }
-        updateCracks()
-    }
-
-    private func stepShards(now: CFTimeInterval, dt: CGFloat) {
-        let elapsed = now - shatterTime
-        let limit = bounds.insetBy(dx: -120, dy: -120)
-        var alive = false
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        for index in shards.indices where !shards[index].done {
-            alive = true
-            guard elapsed >= shards[index].delay else { continue }
-            var shard = shards[index]
-            shard.velocity.y += gravity * dt
-            shard.velocity.x *= 1 - 0.4 * dt
-            shard.offset = shard.offset + shard.velocity * dt
-            shard.vz *= 1 - min(1, 2.2 * dt)
-            shard.vz -= 260 * dt
-            shard.z = min(shard.z + shard.vz * dt, perspective * 0.55)
-            shard.rotation += shard.spin * Double(dt)
-
-            var transform = CATransform3DMakeTranslation(shard.offset.x, shard.offset.y, shard.z)
-            transform = CATransform3DRotate(transform, CGFloat(shard.rotation.z), 0, 0, 1)
-            transform = CATransform3DRotate(transform, CGFloat(shard.rotation.x), 1, 0, 0)
-            transform = CATransform3DRotate(transform, CGFloat(shard.rotation.y), 0, 1, 0)
-            shard.layer.transform = transform
-            // Pieces turning edge-on to the light dim slightly.
-            let facing = abs(cos(shard.rotation.x) * cos(shard.rotation.y))
-            shard.layer.opacity = Float(0.55 + 0.45 * facing)
-
-            let position = shard.layer.position + shard.offset
-            if position.y - shard.reach > limit.maxY || position.x + shard.reach < limit.minX || position.x - shard.reach > limit.maxX || elapsed > 6 {
-                shard.done = true
-                shard.layer.isHidden = true
-            }
-            shards[index] = shard
-        }
-        CATransaction.commit()
-        if !alive, phase == .reforming {
+        case .intact, .reforming:
             stopDisplayLink()
         }
     }
 
     // MARK: Effects
 
-    private func showImpactGlow(at point: CGPoint) {
+    func showImpactGlow(at point: CGPoint) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        impactGlow.bounds = CGRect(x: 0, y: 0, width: 220, height: 220)
+        impactGlow.bounds = CGRect(x: 0, y: 0, width: 200, height: 200)
         impactGlow.position = point
         CATransaction.commit()
         let fade = CAKeyframeAnimation(keyPath: "opacity")
-        fade.values = [0, 1, 0.5]
+        fade.values = [0, 1, 0]
         fade.keyTimes = [0, 0.08, 1]
-        fade.duration = 0.6
-        impactGlow.opacity = 0.5
+        fade.duration = 0.7
         impactGlow.add(fade, forKey: "fade")
         let pop = CABasicAnimation(keyPath: "transform.scale")
         pop.fromValue = 0.2
@@ -750,17 +802,16 @@ final class GlassView: UIView {
         impactGlow.add(pop, forKey: "pop")
     }
 
-    private func flash() {
+    func flash(_ strength: Float = 0.55) {
         let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = 0.55
+        fade.fromValue = strength
         fade.toValue = 0
         fade.duration = 0.28
         fade.timingFunction = CAMediaTimingFunction(name: .easeOut)
         flashLayer.add(fade, forKey: "flash")
-        impactGlow.opacity = 0
     }
 
-    private func shake(intensity: CGFloat) {
+    func shake(intensity: CGFloat) {
         let shake = CAKeyframeAnimation(keyPath: "transform")
         var values: [NSValue] = []
         let steps = intensity > 6 ? 9 : 5
@@ -776,7 +827,7 @@ final class GlassView: UIView {
         stage.layer.add(shake, forKey: "shake")
     }
 
-    private func burstSparks(from origin: FractureOrigin) {
+    func burstSparks(at origin: FractureOrigin, amount: Float = 1) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         sparkLayer.frame = bounds
@@ -792,10 +843,10 @@ final class GlassView: UIView {
             sparkLayer.emitterSize = CGSize(width: max(abs(b.x - a.x), 8), height: max(abs(b.y - a.y), 8))
         }
         if let dust = sparkLayer.emitterCells?.last {
-            dust.color = palette.edge.cgColor
+            dust.color = shardEdge.cgColor
         }
         sparkLayer.beginTime = CACurrentMediaTime()
-        sparkLayer.birthRate = 1
+        sparkLayer.birthRate = amount
         CATransaction.commit()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
             self?.sparkLayer.birthRate = 0
@@ -830,7 +881,6 @@ final class GlassView: UIView {
         dust.scale = 0.5
         dust.scaleRange = 0.4
         dust.alphaSpeed = -0.45
-        dust.spin = 0
         dust.spinRange = 14
         return [glint, dust]
     }
@@ -850,7 +900,7 @@ final class GlassView: UIView {
 
     private static let chipImage: CGImage? = {
         let size = CGSize(width: 14, height: 14)
-        return UIGraphicsImageRenderer(size: size).image { context in
+        return UIGraphicsImageRenderer(size: size).image { _ in
             let path = UIBezierPath()
             path.move(to: CGPoint(x: 2, y: 1))
             path.addLine(to: CGPoint(x: 13, y: 5))
@@ -863,4 +913,22 @@ final class GlassView: UIView {
             path.stroke()
         }.cgImage
     }()
+}
+
+/// The newest build request, readable from the background build queue.
+final class TokenBox {
+    private let lock = NSLock()
+    private var value = 0
+
+    var current: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    func set(_ newValue: Int) {
+        lock.lock()
+        value = newValue
+        lock.unlock()
+    }
 }

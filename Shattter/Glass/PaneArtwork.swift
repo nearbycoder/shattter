@@ -35,9 +35,9 @@ struct GlassPalette {
     ]
 }
 
-/// Renders the intact pane: colour behind glass, reflections, and etched type.
+/// Renders the plain glass pane: colour behind glass and reflections.
 enum PaneArtwork {
-    static func render(size: CGSize, scale: CGFloat, palette: GlassPalette, hint: String, seed: UInt64) -> UIImage {
+    static func render(size: CGSize, scale: CGFloat, palette: GlassPalette, seed: UInt64) -> UIImage {
         var rng = SeededRandom(seed: seed)
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale
@@ -104,45 +104,7 @@ enum PaneArtwork {
                     cg.drawLinearGradient(gradient, start: start, end: end, options: [])
                 }
             }
-
-            drawTitle(in: bounds, palette: palette, hint: hint)
         }
-    }
-
-    private static func drawTitle(in bounds: CGRect, palette: GlassPalette, hint: String) {
-        let width = bounds.width
-        let titleSize = min(width * 0.17, 92)
-        let titleFont = UIFont.systemFont(ofSize: titleSize, weight: .black).rounded
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-
-        let title = "Shattter"
-        let titleHeight = titleFont.lineHeight
-        let titleRect = CGRect(x: 0, y: bounds.height * 0.38 - titleHeight / 2, width: width, height: titleHeight)
-
-        // Etched look: a dark offset under a pale fill and a bright rim.
-        let shadow = NSShadow()
-        shadow.shadowColor = UIColor.black.withAlphaComponent(0.35)
-        shadow.shadowOffset = CGSize(width: 0, height: 2)
-        shadow.shadowBlurRadius = 6
-        let base: [NSAttributedString.Key: Any] = [
-            .font: titleFont, .paragraphStyle: paragraph, .kern: -titleSize * 0.02,
-            .foregroundColor: UIColor.white.withAlphaComponent(0.82), .shadow: shadow,
-        ]
-        (title as NSString).draw(in: titleRect, withAttributes: base)
-        let rim: [NSAttributedString.Key: Any] = [
-            .font: titleFont, .paragraphStyle: paragraph, .kern: -titleSize * 0.02,
-            .foregroundColor: UIColor.clear, .strokeColor: palette.edge.withAlphaComponent(0.9), .strokeWidth: 1.2,
-        ]
-        (title as NSString).draw(in: titleRect, withAttributes: rim)
-
-        let hintFont = UIFont.systemFont(ofSize: min(max(width * 0.042, 15), 22), weight: .semibold).rounded
-        let hintAttributes: [NSAttributedString.Key: Any] = [
-            .font: hintFont, .paragraphStyle: paragraph, .kern: 2.4,
-            .foregroundColor: UIColor.white.withAlphaComponent(0.72),
-        ]
-        let hintRect = CGRect(x: 24, y: titleRect.maxY + 6, width: width - 48, height: hintFont.lineHeight * 2.4)
-        (hint.uppercased() as NSString).draw(in: hintRect, withAttributes: hintAttributes)
     }
 }
 
