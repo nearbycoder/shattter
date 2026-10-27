@@ -92,7 +92,7 @@ enum ScreenArt {
         text(time, in: CGRect(x: frame.maxX - 80, y: frame.minY + 15, width: 66, height: 18),
              font: .systemFont(ofSize: 13), color: UIColor(white: 0.45, alpha: 1), alignment: .right)
         text(body, in: CGRect(x: textX, y: frame.minY + 35, width: frame.maxX - textX - 14, height: 22),
-             font: .systemFont(ofSize: 15), color: UIColor(white: 0.1, alpha: 1), alignment: .left)
+             font: .systemFont(ofSize: frame.width < 360 ? 13.5 : 15), color: UIColor(white: 0.1, alpha: 1), alignment: .left)
     }
 
     // MARK: Home screen
