@@ -27,7 +27,6 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.entertainment
         UIApplicationSupportsIndirectInputEvents: true
-        UIRequiresFullScreen: true
         CADisableMinimumFrameDurationOnPhone: true
         UIStatusBarHidden: true
         UIViewControllerBasedStatusBarAppearance: true
@@ -35,6 +34,9 @@ targets:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
           UISceneConfigurations:

@@ -2,7 +2,10 @@ import AVFoundation
 import CoreHaptics
 import UIKit
 
-/// Procedurally synthesised glass sounds, played through a small pool of player nodes.
+/// Procedurally synthesised glass sounds, played from pools of in-memory WAV players.
+///
+/// `AVAudioPlayer` rides out the audio route changes that happen when the phone folds or
+/// unfolds; a player node on a reconfiguring `AVAudioEngine` raises an exception instead.
 final class GlassSound {
     static let shared = GlassSound()
 
@@ -10,91 +13,83 @@ final class GlassSound {
         case shatter, crack, crunch, chime
     }
 
-    private let engine = AVAudioEngine()
-    private let reverb = AVAudioUnitReverb()
-    private var players: [AVAudioPlayerNode] = []
-    private var buffers: [Effect: [AVAudioPCMBuffer]] = [:]
+    private var players: [Effect: [[AVAudioPlayer]]] = [:]
     private var lastVariant: [Effect: Int] = [:]
-    private var nextPlayer = 0
     private var prepared = false
-    private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2)!
+    private let sessionQueue = DispatchQueue(label: "app.shattter.audio-session")
 
     func prepare() {
         guard !prepared else { return }
         prepared = true
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-        try? session.setActive(true)
-
-        reverb.loadFactoryPreset(.mediumRoom)
-        reverb.wetDryMix = 14
-        engine.attach(reverb)
-        engine.connect(reverb, to: engine.mainMixerNode, format: format)
-        for _ in 0..<10 {
-            let player = AVAudioPlayerNode()
-            engine.attach(player)
-            engine.connect(player, to: reverb, format: format)
-            players.append(player)
-        }
-        try? engine.start()
-
+        activateSession()
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] _ in
             self?.resume()
         }
-        NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
-            self?.resume()
-        }
 
-        let format = format
         DispatchQueue.global(qos: .userInitiated).async {
-            var rendered: [Effect: [AVAudioPCMBuffer]] = [:]
+            var rendered: [Effect: [[AVAudioPlayer]]] = [:]
             for effect in Effect.allCases {
                 let variants = effect == .crack ? 8 : (effect == .chime ? 2 : 3)
+                let copies = effect == .crack ? 3 : 2
                 rendered[effect] = (0..<variants).compactMap { variant in
-                    GlassSynth.render(effect, seed: UInt64(variant + 1) &* 7919, format: format)
+                    guard let wav = GlassSynth.render(effect, seed: UInt64(variant + 1) &* 7919) else { return nil }
+                    let pool = (0..<copies).compactMap { _ -> AVAudioPlayer? in
+                        let player = try? AVAudioPlayer(data: wav, fileTypeHint: AVFileType.wav.rawValue)
+                        player?.prepareToPlay()
+                        return player
+                    }
+                    return pool.isEmpty ? nil : pool
                 }
             }
-            DispatchQueue.main.async { self.buffers = rendered }
+            DispatchQueue.main.async { self.players = rendered }
         }
         Haptics.shared.prepare()
     }
 
     func resume() {
-        try? AVAudioSession.sharedInstance().setActive(true)
-        if prepared, !engine.isRunning { try? engine.start() }
+        activateSession()
         Haptics.shared.prepare()
     }
 
+    private func activateSession() {
+        sessionQueue.async {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try? session.setActive(true)
+        }
+    }
+
     func play(_ effect: Effect, volume: Float = 1) {
-        guard let variants = buffers[effect], !variants.isEmpty else { return }
-        if !engine.isRunning { try? engine.start() }
-        guard engine.isRunning else { return }
+        guard let variants = players[effect], !variants.isEmpty else { return }
         // Avoid repeating the same variant twice in a row.
         var index = Int.random(in: 0..<variants.count)
         if variants.count > 1, index == lastVariant[effect] { index = (index + 1) % variants.count }
         lastVariant[effect] = index
-        let player = players[nextPlayer]
-        nextPlayer = (nextPlayer + 1) % players.count
+        let pool = variants[index]
+        let player = pool.first { !$0.isPlaying } ?? pool.max { $0.currentTime < $1.currentTime }!
         player.stop()
+        player.currentTime = 0
         player.volume = volume
-        player.pan = 0
-        player.scheduleBuffer(variants[index], at: nil, options: [], completionHandler: nil)
         player.play()
     }
 }
 
 /// Additive and noise synthesis for breaking glass.
 enum GlassSynth {
-    static func render(_ effect: GlassSound.Effect, seed: UInt64, format: AVAudioFormat) -> AVAudioPCMBuffer? {
-        var voice = Voice(sampleRate: Float(format.sampleRate), seconds: duration(effect), seed: seed)
+    static let sampleRate: Float = 44_100
+
+    /// Renders an effect as 16-bit stereo WAV data.
+    static func render(_ effect: GlassSound.Effect, seed: UInt64) -> Data? {
+        var voice = Voice(sampleRate: sampleRate, seconds: duration(effect), seed: seed)
         switch effect {
         case .shatter: voice.shatter()
         case .crack: voice.crack()
         case .crunch: voice.crunch()
         case .chime: voice.chime()
         }
+        voice.addRoom(mix: effect == .chime ? 0.22 : 0.14)
         voice.normalize(peak: effect == .crack ? 0.7 : 0.92)
-        return voice.buffer(format: format)
+        return voice.wav()
     }
 
     private static func duration(_ effect: GlassSound.Effect) -> Float {
@@ -285,13 +280,54 @@ enum GlassSynth {
             }
         }
 
-        func buffer(format: AVAudioFormat) -> AVAudioPCMBuffer? {
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(left.count)),
-                  let channels = buffer.floatChannelData else { return nil }
-            buffer.frameLength = AVAudioFrameCount(left.count)
-            left.withUnsafeBufferPointer { channels[0].update(from: $0.baseAddress!, count: left.count) }
-            right.withUnsafeBufferPointer { channels[1].update(from: $0.baseAddress!, count: right.count) }
-            return buffer
+        /// A small room: parallel feedback combs with slightly different lengths per side.
+        mutating func addRoom(mix: Float) {
+            let delays: [Float] = [0.0297, 0.0371, 0.0411, 0.0437]
+            var wetLeft = Array(repeating: Float(0), count: left.count)
+            var wetRight = Array(repeating: Float(0), count: right.count)
+            for (index, delay) in delays.enumerated() {
+                let lengthLeft = Int(delay * sampleRate)
+                let lengthRight = Int((delay + 0.0023) * sampleRate)
+                let feedback: Float = 0.72 - Float(index) * 0.03
+                for i in lengthLeft..<left.count {
+                    wetLeft[i] += left[i - lengthLeft] * 0.25 + wetLeft[i - lengthLeft] * feedback * 0.25
+                }
+                for i in lengthRight..<right.count {
+                    wetRight[i] += right[i - lengthRight] * 0.25 + wetRight[i - lengthRight] * feedback * 0.25
+                }
+            }
+            for i in left.indices {
+                left[i] += wetLeft[i] * mix
+                right[i] += wetRight[i] * mix
+            }
+        }
+
+        func wav() -> Data? {
+            let frames = left.count
+            let dataSize = frames * 4
+            var data = Data(capacity: 44 + dataSize)
+            func append<T: FixedWidthInteger>(_ value: T) {
+                withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+            }
+            data.append(contentsOf: Array("RIFF".utf8))
+            append(UInt32(36 + dataSize))
+            data.append(contentsOf: Array("WAVEfmt ".utf8))
+            append(UInt32(16))
+            append(UInt16(1))
+            append(UInt16(2))
+            append(UInt32(sampleRate))
+            append(UInt32(sampleRate) * 4)
+            append(UInt16(4))
+            append(UInt16(16))
+            data.append(contentsOf: Array("data".utf8))
+            append(UInt32(dataSize))
+            var samples = [Int16](repeating: 0, count: frames * 2)
+            for i in 0..<frames {
+                samples[i * 2] = Int16(max(-1, min(1, left[i])) * 32_767)
+                samples[i * 2 + 1] = Int16(max(-1, min(1, right[i])) * 32_767)
+            }
+            samples.withUnsafeBytes { data.append(contentsOf: $0) }
+            return data
         }
     }
 }

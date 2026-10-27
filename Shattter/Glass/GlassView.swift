@@ -148,10 +148,10 @@ final class GlassView: UIView {
         prismLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
         prismLayer.endPoint = CGPoint(x: 0.5, y: 0)
         prismLayer.colors = [UIColor.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple, .systemPink].map(\.cgColor)
-        prismLayer.opacity = 0.6
+        prismLayer.opacity = 0.3
         prismMask.fillColor = nil
         prismMask.strokeColor = UIColor.white.cgColor
-        prismMask.lineWidth = 2.6
+        prismMask.lineWidth = 1.6
         prismMask.lineJoin = .round
         prismLayer.mask = prismMask
         glassLayer.addSublayer(prismLayer)
