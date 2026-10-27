@@ -91,3 +91,23 @@ final class CrackPatternTests: XCTestCase {
         XCTAssertEqual(area, 90_000, accuracy: 1)
     }
 }
+
+final class SoundPackTests: XCTestCase {
+    func testEveryPackRendersEveryEffect() {
+        XCTAssertEqual(SoundPack.allCases.count, 10)
+        for pack in SoundPack.allCases {
+            for effect in GlassSound.Effect.allCases {
+                guard let wav = GlassSynth.render(effect, pack: pack, seed: 1) else {
+                    XCTFail("\(pack) \(effect) failed to render")
+                    continue
+                }
+                XCTAssertGreaterThan(wav.count, 44 + 4 * 4410, "\(pack) \(effect) is too short")
+                let loud = wav.withUnsafeBytes { raw -> Bool in
+                    let samples = raw.bindMemory(to: Int16.self)
+                    return (22..<samples.count).contains { abs(Int(samples[$0])) > 8000 }
+                }
+                XCTAssertTrue(loud, "\(pack) \(effect) is silent")
+            }
+        }
+    }
+}

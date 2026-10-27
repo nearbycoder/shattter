@@ -14,6 +14,7 @@ struct OptionsView: View {
     @AppStorage(GagSettings.Key.count) private var count = 0
     @AppStorage(GagSettings.Key.crackPattern) private var crackPattern: CrackPattern = .random
     @AppStorage(GagSettings.Key.crackgate) private var crackgate = false
+    @AppStorage(GagSettings.Key.soundPack) private var soundPack: SoundPack = .phoneScreen
 
     let previews: [PrankScreen: UIImage]
     let previewAspect: CGFloat
@@ -106,9 +107,22 @@ struct OptionsView: View {
                     Toggle("Reveal “Gotcha!” on fake screens", isOn: $gotcha)
                 }
 
-                Section("Feedback") {
+                Section {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(SoundPack.allCases) { option in
+                            tile(title: option.title, symbol: option.symbol, selected: soundPack == option) {
+                                soundPack = option
+                                GlassSound.shared.load(option, preview: true)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 6)
                     Toggle("Sound", isOn: $sound)
                     Toggle("Haptics", isOn: $haptics)
+                } header: {
+                    Text("Sound")
+                } footer: {
+                    Text("Tap a sound to hear it. Plays even when the ringer is silent.")
                 }
 
                 Section {

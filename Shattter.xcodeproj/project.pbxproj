@@ -19,6 +19,8 @@
 		8895E12EBF83B0B0859C1903 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A4F3FBADBB37A8D48A2E506 /* Assets.xcassets */; };
 		8E64DA543E7758FCE657E6F6 /* OptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF2AA7F6D2DD0B7FD3ABCB5 /* OptionsView.swift */; };
 		94DA14363944BB95A9745DC1 /* FractureGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850C0280A91AF993F02D72E6 /* FractureGeometry.swift */; };
+		9CFA8FAA7C741E5C31300B94 /* GlassSynth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 394209E6A592E5B429027D69 /* GlassSynth.swift */; };
+		9E6FFCE6E0B3E0138E342715 /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA44878EEE09CF063E9F366 /* SoundPack.swift */; };
 		B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC6864BFAA2505C099EF0A /* GlassView.swift */; };
 		F0077ED46F62BB99F3AD35C0 /* GagSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938A8F2B526D240735913AC3 /* GagSettings.swift */; };
 		F259F3BD6D1EE56D77214EBB /* BackdropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64ABA4F99FA65142620E21BC /* BackdropView.swift */; };
@@ -39,6 +41,7 @@
 		0DF168158519D1C138F25D0A /* GlassView+Shatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlassView+Shatter.swift"; sourceTree = "<group>"; };
 		132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneArtwork.swift; sourceTree = "<group>"; };
 		3523126620D0B460C6588B4F /* ShattterTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ShattterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		394209E6A592E5B429027D69 /* GlassSynth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSynth.swift; sourceTree = "<group>"; };
 		3C09FEF7F0FD83448DC5786A /* Shattter.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Shattter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64ABA4F99FA65142620E21BC /* BackdropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackdropView.swift; sourceTree = "<group>"; };
 		77C0D58DB66619D7400BDAB1 /* CrackPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrackPattern.swift; sourceTree = "<group>"; };
@@ -50,6 +53,7 @@
 		8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSound.swift; sourceTree = "<group>"; };
 		938A8F2B526D240735913AC3 /* GagSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GagSettings.swift; sourceTree = "<group>"; };
 		B161E3D8081E457AC14AAD3A /* GlassViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassViewController.swift; sourceTree = "<group>"; };
+		BCA44878EEE09CF063E9F366 /* SoundPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPack.swift; sourceTree = "<group>"; };
 		D3BD1460D194B7DB429E3FD6 /* GlassView+Crackgate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlassView+Crackgate.swift"; sourceTree = "<group>"; };
 		FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FBF2AA7F6D2DD0B7FD3ABCB5 /* OptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsView.swift; sourceTree = "<group>"; };
@@ -61,6 +65,8 @@
 			isa = PBXGroup;
 			children = (
 				8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */,
+				394209E6A592E5B429027D69 /* GlassSynth.swift */,
+				BCA44878EEE09CF063E9F366 /* SoundPack.swift */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -252,6 +258,7 @@
 				94DA14363944BB95A9745DC1 /* FractureGeometry.swift in Sources */,
 				F0077ED46F62BB99F3AD35C0 /* GagSettings.swift in Sources */,
 				2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */,
+				9CFA8FAA7C741E5C31300B94 /* GlassSynth.swift in Sources */,
 				FBC2D4152EE1E5D51D0FC4C5 /* GlassView+Crackgate.swift in Sources */,
 				61FE7477F6D74F4511CC9888 /* GlassView+Shatter.swift in Sources */,
 				B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */,
@@ -259,6 +266,7 @@
 				8E64DA543E7758FCE657E6F6 /* OptionsView.swift in Sources */,
 				58FA5A580C8860923B629997 /* PaneArtwork.swift in Sources */,
 				2E0A3498B00EE2FD98BF4405 /* ScreenArt.swift in Sources */,
+				9E6FFCE6E0B3E0138E342715 /* SoundPack.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

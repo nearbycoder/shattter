@@ -8,6 +8,7 @@ The ultimate glass-breaking gag app for iPhone Duo. Native UIKit + SwiftUI, no d
 - **Folded or unfolded:** every tap leaves its own crack web. Tap the same spot again and it spreads. After the chosen number of hits (1, 2, 3, 5, 8, or never), cracks race across the whole pane and it bursts.
 - **20 crack patterns** for taps and hinge bends, each distinct even from a single hit: Spider Web, Bullseye, Starburst, Buckshot, Lightning, Tempered, Shear, Corner Drop, Pebble Chip, Hairline, Spiral, Honeycomb, Daggers, Edge Split, Ripple, Fault Line, Snowflake, Crater, Chaos and Double Tap. Or Surprise Me for a different pattern every hit.
 - **Crackgate Mode 😬:** recreates the October 2026 iPhone Duo inner-display reports ([9to5Mac](https://9to5mac.com/2026/10/25/iphone-duo-displays-cracking/), [MacRumors](https://www.macrumors.com/2026/10/23/iphone-duo-screen-cracks/), [Engadget on iFixit's teardown](https://www.engadget.com/2296498/ifixit-teardown-of-iphone-duo-shows-potential-causes-for-cracked-screens/)). While the phone unfolds, something catches in the hinge, then there's one loud crack. A thin crack runs along the crease from the same spot in its lower half, just below the hinge cable, where iFixit found the center support bar's stress point. A band of stuck bright pixels then runs from the break across one half of the screen; it's usually white, with iFixit's green-line variant sometimes. Finally a "#Crackgate · $999" gotcha card appears.
+- **10 sound packs:** Phone Screen, Window Pane, Wine Glass, Bottle Smash, Car Window (tempered), Mirror, Crystal, Ice Crack, Cartoon and 8-Bit. Tap one in the options to hear it.
 - **Six shatter animations:** Explode, Crumble, Black Hole (shards spiral into the impact, then pop), Blast (shockwave), Slow-Mo, and Hang & Drop. Or let it surprise you.
 - **Prank screens:** the glass can sit over a convincing fake Lock Screen (live time, "Did you drop your phone again??" notification), Home Screen, Messages thread, switched-off screen, or photo. When a fake screen breaks, it shows a dead, bleeding LCD, then optionally "Gotcha! 😜".
 - **Repairs:** Fade In with a fresh pane, or Rewind, where the shards fly back and reassemble.
@@ -26,7 +27,9 @@ The ultimate glass-breaking gag app for iPhone Duo. Native UIKit + SwiftUI, no d
 | `Shattter/Options/` | Settings model and the hidden SwiftUI options sheet. |
 | `Shattter/Glass/GlassViewController.swift` | `UIHingeInteraction` (iOS 27.1) hinge angle/status updates and shake handling. |
 | `Shattter/Glass/PaneArtwork.swift` | Renders the pane and pre-cuts shard sprites off the main thread while cracks spread. |
-| `Shattter/Audio/GlassSound.swift` | Procedural glass synthesis (impact transient, crash body, inharmonic shard tinkles, floor bounces) and Core Haptics patterns. No audio files. |
+| `Shattter/Audio/GlassSynth.swift` | Procedural glass synthesis: noise-excited resonator shards, micro-fracture crackle, band-limited crash, ringing pane modes and a diffuse room. No audio files. |
+| `Shattter/Audio/SoundPack.swift` | The 10 sound packs and their recipes. |
+| `Shattter/Audio/GlassSound.swift` | Pack loading and previews, pooled players, Core Haptics. |
 
 ## Build, test, ship
 

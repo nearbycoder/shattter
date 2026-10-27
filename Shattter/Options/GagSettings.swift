@@ -114,6 +114,7 @@ enum GagSettings {
         static let count = "panesShattered"
         static let crackPattern = "crackPattern"
         static let crackgate = "crackgate"
+        static let soundPack = "soundPack"
     }
 
     static func registerDefaults() {
@@ -129,6 +130,7 @@ enum GagSettings {
             Key.haptics: true,
             Key.crackPattern: CrackPattern.random.rawValue,
             Key.crackgate: false,
+            Key.soundPack: SoundPack.phoneScreen.rawValue,
         ])
     }
 
@@ -165,6 +167,10 @@ enum GagSettings {
 
     /// Mimics the October 2026 iPhone Duo inner-display reports: crunch on unfold, crack down the crease.
     static var crackgate: Bool { defaults.bool(forKey: Key.crackgate) }
+
+    static var soundPack: SoundPack {
+        SoundPack(rawValue: defaults.string(forKey: Key.soundPack) ?? "") ?? .phoneScreen
+    }
 
     static var count: Int {
         get { defaults.integer(forKey: Key.count) }
