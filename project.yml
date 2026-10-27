@@ -1,0 +1,78 @@
+name: Shattter
+options:
+  bundleIdPrefix: app.shattter
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  xcodeVersion: "27.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    DEVELOPMENT_TEAM: 4F2YLTHL8T
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Shattter:
+    type: application
+    platform: iOS
+    sources:
+      - path: Shattter
+        excludes:
+          - Resources/Info.plist
+    info:
+      path: Shattter/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Shattter
+        CFBundleName: Shattter
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.entertainment
+        UIApplicationSupportsIndirectInputEvents: true
+        UIRequiresFullScreen: true
+        CADisableMinimumFrameDurationOnPhone: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.shattter.glass
+        PRODUCT_NAME: Shattter
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+  ShattterTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - ShattterTests
+    dependencies:
+      - target: Shattter
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: app.shattter.glass.tests
+schemes:
+  Shattter:
+    build:
+      targets:
+        Shattter: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ShattterTests
+    archive:
+      config: Release

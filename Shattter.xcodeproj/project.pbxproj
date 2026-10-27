@@ -1,0 +1,482 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0C5D3D8FDDF60DB7DC35BE4C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8CF9F8C9EA03EEDC9DC2E55D /* PrivacyInfo.xcprivacy */; };
+		1E09512DCA09EE158A967387 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */; };
+		2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */; };
+		436CEF46868B7200C36CF793 /* FractureGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8956135F2C79C748B053B142 /* FractureGeometryTests.swift */; };
+		58FA5A580C8860923B629997 /* PaneArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */; };
+		80FCF466C93F405D151D2445 /* GlassViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B161E3D8081E457AC14AAD3A /* GlassViewController.swift */; };
+		8895E12EBF83B0B0859C1903 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A4F3FBADBB37A8D48A2E506 /* Assets.xcassets */; };
+		94DA14363944BB95A9745DC1 /* FractureGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850C0280A91AF993F02D72E6 /* FractureGeometry.swift */; };
+		B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC6864BFAA2505C099EF0A /* GlassView.swift */; };
+		F259F3BD6D1EE56D77214EBB /* BackdropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64ABA4F99FA65142620E21BC /* BackdropView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A7A176866DE11E17FE49CB69 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7C3E9F78BC10F01302656390 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1610CF380EF3BC3F6CF68F15;
+			remoteInfo = Shattter;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneArtwork.swift; sourceTree = "<group>"; };
+		3523126620D0B460C6588B4F /* ShattterTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ShattterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C09FEF7F0FD83448DC5786A /* Shattter.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Shattter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		64ABA4F99FA65142620E21BC /* BackdropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackdropView.swift; sourceTree = "<group>"; };
+		7ACC6864BFAA2505C099EF0A /* GlassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassView.swift; sourceTree = "<group>"; };
+		850C0280A91AF993F02D72E6 /* FractureGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractureGeometry.swift; sourceTree = "<group>"; };
+		8956135F2C79C748B053B142 /* FractureGeometryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractureGeometryTests.swift; sourceTree = "<group>"; };
+		8A4F3FBADBB37A8D48A2E506 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8CF9F8C9EA03EEDC9DC2E55D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSound.swift; sourceTree = "<group>"; };
+		B161E3D8081E457AC14AAD3A /* GlassViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassViewController.swift; sourceTree = "<group>"; };
+		FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0F465CBAE34DBD4D9D855AC7 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				8F25835CC7CF0934FE9ACFC7 /* GlassSound.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		15FF05DE37FAF0EC01A0558E /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FBA5D19F417F67E67A8E9E57 /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		3BB8C11E994B1C72B341EC8A /* Glass */ = {
+			isa = PBXGroup;
+			children = (
+				64ABA4F99FA65142620E21BC /* BackdropView.swift */,
+				850C0280A91AF993F02D72E6 /* FractureGeometry.swift */,
+				7ACC6864BFAA2505C099EF0A /* GlassView.swift */,
+				B161E3D8081E457AC14AAD3A /* GlassViewController.swift */,
+				132999729E17ABD08B2B3AF9 /* PaneArtwork.swift */,
+			);
+			path = Glass;
+			sourceTree = "<group>";
+		};
+		424C20FE66769C66FEA6F99C = {
+			isa = PBXGroup;
+			children = (
+				F5EEA7B756EBD08E2C64E4E5 /* Shattter */,
+				44DDFD5138B7F88957D7A11A /* ShattterTests */,
+				D29753A96DF98AE3D2C5A810 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		44DDFD5138B7F88957D7A11A /* ShattterTests */ = {
+			isa = PBXGroup;
+			children = (
+				8956135F2C79C748B053B142 /* FractureGeometryTests.swift */,
+			);
+			path = ShattterTests;
+			sourceTree = "<group>";
+		};
+		A3557079E96F21B7C923D2FA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				8A4F3FBADBB37A8D48A2E506 /* Assets.xcassets */,
+				8CF9F8C9EA03EEDC9DC2E55D /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D29753A96DF98AE3D2C5A810 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3C09FEF7F0FD83448DC5786A /* Shattter.app */,
+				3523126620D0B460C6588B4F /* ShattterTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F5EEA7B756EBD08E2C64E4E5 /* Shattter */ = {
+			isa = PBXGroup;
+			children = (
+				15FF05DE37FAF0EC01A0558E /* App */,
+				0F465CBAE34DBD4D9D855AC7 /* Audio */,
+				3BB8C11E994B1C72B341EC8A /* Glass */,
+				A3557079E96F21B7C923D2FA /* Resources */,
+			);
+			path = Shattter;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1610CF380EF3BC3F6CF68F15 /* Shattter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8D99EC772CD1AD054C9EF8A9 /* Build configuration list for PBXNativeTarget "Shattter" */;
+			buildPhases = (
+				6516C2987BE3AF24D7CDCB55 /* Sources */,
+				9CEEEE106016CABD0DC39F82 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Shattter;
+			packageProductDependencies = (
+			);
+			productName = Shattter;
+			productReference = 3C09FEF7F0FD83448DC5786A /* Shattter.app */;
+			productType = "com.apple.product-type.application";
+		};
+		920ED7886E7338DE5A86081E /* ShattterTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 170C78BE0EFBD8E628BFA4D9 /* Build configuration list for PBXNativeTarget "ShattterTests" */;
+			buildPhases = (
+				F09D060325CE3FA0BA1A6A7D /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D7756E4393055392B7F798EB /* PBXTargetDependency */,
+			);
+			name = ShattterTests;
+			packageProductDependencies = (
+			);
+			productName = ShattterTests;
+			productReference = 3523126620D0B460C6588B4F /* ShattterTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7C3E9F78BC10F01302656390 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					1610CF380EF3BC3F6CF68F15 = {
+						DevelopmentTeam = 4F2YLTHL8T;
+					};
+					920ED7886E7338DE5A86081E = {
+						DevelopmentTeam = 4F2YLTHL8T;
+					};
+				};
+			};
+			buildConfigurationList = 1208139D19743F22439F0647 /* Build configuration list for PBXProject "Shattter" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 424C20FE66769C66FEA6F99C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D29753A96DF98AE3D2C5A810 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1610CF380EF3BC3F6CF68F15 /* Shattter */,
+				920ED7886E7338DE5A86081E /* ShattterTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9CEEEE106016CABD0DC39F82 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8895E12EBF83B0B0859C1903 /* Assets.xcassets in Resources */,
+				0C5D3D8FDDF60DB7DC35BE4C /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6516C2987BE3AF24D7CDCB55 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E09512DCA09EE158A967387 /* AppDelegate.swift in Sources */,
+				F259F3BD6D1EE56D77214EBB /* BackdropView.swift in Sources */,
+				94DA14363944BB95A9745DC1 /* FractureGeometry.swift in Sources */,
+				2FFECFC37DB4EBE77ADFB828 /* GlassSound.swift in Sources */,
+				B54057AA7F5B935D3682CAAB /* GlassView.swift in Sources */,
+				80FCF466C93F405D151D2445 /* GlassViewController.swift in Sources */,
+				58FA5A580C8860923B629997 /* PaneArtwork.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F09D060325CE3FA0BA1A6A7D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				436CEF46868B7200C36CF793 /* FractureGeometryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D7756E4393055392B7F798EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1610CF380EF3BC3F6CF68F15 /* Shattter */;
+			targetProxy = A7A176866DE11E17FE49CB69 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3C8285304FC096E19284D8CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 4F2YLTHL8T;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		41B6D070E4CB1BEF77705F7A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.shattter.glass.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shattter.app/Shattter";
+			};
+			name = Release;
+		};
+		755A1F374374E191B8D15074 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Shattter/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.shattter.glass;
+				PRODUCT_NAME = Shattter;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7591AF76106FE19A652ED0EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 4F2YLTHL8T;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AF35F8B50F40250334334240 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Shattter/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.shattter.glass;
+				PRODUCT_NAME = Shattter;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FD366228517BAEC987FE64F5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.shattter.glass.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Shattter.app/Shattter";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1208139D19743F22439F0647 /* Build configuration list for PBXProject "Shattter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7591AF76106FE19A652ED0EE /* Debug */,
+				3C8285304FC096E19284D8CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		170C78BE0EFBD8E628BFA4D9 /* Build configuration list for PBXNativeTarget "ShattterTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD366228517BAEC987FE64F5 /* Debug */,
+				41B6D070E4CB1BEF77705F7A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8D99EC772CD1AD054C9EF8A9 /* Build configuration list for PBXNativeTarget "Shattter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				755A1F374374E191B8D15074 /* Debug */,
+				AF35F8B50F40250334334240 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7C3E9F78BC10F01302656390 /* Project object */;
+}
