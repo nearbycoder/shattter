@@ -6,7 +6,8 @@ let rawDir = CommandLine.arguments[1]
 let outDir = CommandLine.arguments[2]
 let device = CommandLine.arguments[3]
 let isPad = device == "ipad"
-let canvas = isPad ? CGSize(width: 2064, height: 2752) : CGSize(width: 1320, height: 2868)
+// App Store Connect's iPhone slot takes the 6.3" Dynamic Island size; iPad takes 13".
+let canvas = isPad ? CGSize(width: 2064, height: 2752) : CGSize(width: 1206, height: 2622)
 
 let shots: [(file: String, title: String, subtitle: String, ipad: Bool)] = [
     ("1-hero", "Crack your screen.", "Tap the glass and watch it splinter", true),
@@ -44,9 +45,9 @@ for shot in shots where !isPad || shot.ipad {
     // Caption.
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
-    let titleSize: CGFloat = isPad ? 150 : 112
-    let subSize: CGFloat = isPad ? 64 : 50
-    let titleTop = canvas.height - (isPad ? 150 : 170)
+    let titleSize: CGFloat = isPad ? 150 : 102
+    let subSize: CGFloat = isPad ? 64 : 46
+    let titleTop = canvas.height - (isPad ? 150 : 155)
     let title = NSAttributedString(string: shot.title, attributes: [.font: rounded(titleSize, .black), .foregroundColor: NSColor.white, .paragraphStyle: paragraph, .kern: -1])
     title.draw(in: CGRect(x: 40, y: titleTop - titleSize * 1.25, width: canvas.width - 80, height: titleSize * 1.3))
     let subtitle = NSAttributedString(string: shot.subtitle, attributes: [.font: rounded(subSize, .semibold), .foregroundColor: NSColor(white: 1, alpha: 0.72), .paragraphStyle: paragraph])
@@ -55,11 +56,11 @@ for shot in shots where !isPad || shot.ipad {
     // Device: the capture inside a dark bezel, with a shadow.
     let deviceWidth = canvas.width * (isPad ? 0.76 : 0.79)
     let screenSize = CGSize(width: deviceWidth, height: deviceWidth * raw.size.height / raw.size.width)
-    let bezel: CGFloat = isPad ? 26 : 22
+    let bezel: CGFloat = isPad ? 26 : 20
     let top = titleTop - titleSize * 1.25 - subSize * 1.6 - (isPad ? 70 : 60)
     let screenRect = CGRect(x: (canvas.width - screenSize.width) / 2, y: top - screenSize.height, width: screenSize.width, height: screenSize.height)
     let bodyRect = screenRect.insetBy(dx: -bezel, dy: -bezel)
-    let radius: CGFloat = isPad ? 60 : 120
+    let radius: CGFloat = isPad ? 60 : 110
     ctx.saveGState()
     ctx.setShadow(offset: CGSize(width: 0, height: -24), blur: 80, color: NSColor.black.withAlphaComponent(0.6).cgColor)
     NSColor(white: 0.08, alpha: 1).setFill()
